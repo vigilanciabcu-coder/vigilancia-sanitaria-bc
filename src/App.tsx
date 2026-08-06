@@ -60,10 +60,6 @@ export default function App() {
   // Navigation & View
   const [currentView, setCurrentView] = useState<'home' | 'feiras' | 'agenda' | 'master' | 'fiscalizacao'>('home');
 
-  // Modals
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [trocaSenhaOpen, setTrocaSenhaOpen] = useState(false);
-
   // App State with Persistence
   const [users, setUsers] = useState<UserProfile[]>(() => {
     const saved = localStorage.getItem('visa_users');
@@ -72,8 +68,15 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('visa_current_user');
-    return saved ? JSON.parse(saved) : INITIAL_USERS[0];
+    return saved ? JSON.parse(saved) : null;
   });
+
+  // Modals
+  const [loginOpen, setLoginOpen] = useState<boolean>(() => {
+    const saved = localStorage.getItem('visa_current_user');
+    return !saved;
+  });
+  const [trocaSenhaOpen, setTrocaSenhaOpen] = useState(false);
 
   const [escala, setEscala] = useState<EscalaItem[]>(() => {
     const saved = localStorage.getItem('visa_escala');
@@ -124,6 +127,7 @@ export default function App() {
       localStorage.setItem('visa_current_user', JSON.stringify(currentUser));
     } else {
       localStorage.removeItem('visa_current_user');
+      setLoginOpen(true);
     }
   }, [currentUser]);
 
