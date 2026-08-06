@@ -125,6 +125,34 @@ git push -u origin main
 
 ---
 
+## 🔺 Tutorial de Deploy no Vercel (Do GitHub para o Vercel)
+
+Após enviar o seu projeto para o GitHub, colocá-lo no ar pelo **Vercel** é extremamente rápido e gratuito:
+
+### Passo 1: Acessar ou Criar conta no Vercel
+1. Acesse [vercel.com](https://vercel.com).
+2. Faça login usando sua conta do **GitHub** (clique em *Continue with GitHub*).
+
+### Passo 2: Importar o Repositório
+1. No painel (Dashboard) do Vercel, clique no botão **"Add New..."** e selecione **"Project"**.
+2. Na lista de repositórios do seu GitHub, localize o repositório do projeto (ex: `vigilancia-sanitaria-bc`).
+3. Clique em **"Import"**.
+
+### Passo 3: Configurar o Projeto (Detectado Automaticamente)
+1. O Vercel reconhecerá automaticamente que se trata de um projeto **Vite**.
+2. As configurações padrão são:
+   - **Framework Preset**: Vite
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+3. Não precisa alterar nenhuma dessas configurações!
+4. Clique no botão azul **"Deploy"**.
+
+### Passo 4: Prontinho! 🎉
+- O Vercel irá compilar a aplicação e em menos de 1 minuto vai gerar o link público da sua aplicação (ex: `vigilancia-sanitaria-bc.vercel.app`).
+- **Atualização Automática**: Toda vez que você enviar novos commits para o GitHub (`git push`), o Vercel irá atualizar o site automaticamente online!
+
+---
+
 ## 🏛️ Créditos e Instituição
 **Prefeitura Municipal de Balneário Camboriú**  
 *Secretaria de Saúde - Diretoria de Vigilância Sanitária (DVIS)*  

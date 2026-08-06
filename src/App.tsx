@@ -28,6 +28,13 @@ import {
   INITIAL_FISCALIZACOES
 } from './data/mockData';
 
+import {
+  fetchOperadoresFromSupabase,
+  saveOperadorToSupabase,
+  deleteOperadorFromSupabase,
+  seedInitialOperadoresIfEmpty
+} from './lib/supabaseService';
+
 const PORTAL_BUTTONS: PortalButton[] = [
   { id: 'pref', nome: 'Prefeitura', url: 'https://www.bc.sc.gov.br/', img: 'https://wcbzmpnvcjamlgljsksk.supabase.co/storage/v1/object/public/public-assets/brasao__1_-removebg-preview%20(1).avif', acao: 'link' },
   { id: 'proc', nome: 'Processos', url: 'https://script.google.com/macros/s/AKfycbyaTV2FDyJ2-tC5l7OXiEvD5DVw2QxH_CHO_rHKmdnYxu8bqDQapmP5K9h6C5TEaWWXTQ/exec', img: 'https://wcbzmpnvcjamlgljsksk.supabase.co/storage/v1/object/public/public-assets/processos.avif', acao: 'link' },
@@ -92,6 +99,20 @@ export default function App() {
     const saved = localStorage.getItem('visa_chat');
     return saved ? JSON.parse(saved) : INITIAL_CHAT;
   });
+
+  // Sync com Supabase no carregamento
+  useEffect(() => {
+    async function loadSupabaseUsers() {
+      const remoteUsers = await fetchOperadoresFromSupabase();
+      if (remoteUsers && remoteUsers.length > 0) {
+        setUsers(remoteUsers);
+      } else {
+        // Se a tabela no Supabase estiver vazia, popula com os usuários padrão
+        await seedInitialOperadoresIfEmpty(INITIAL_USERS);
+      }
+    }
+    loadSupabaseUsers();
+  }, []);
 
   // LocalStorage Effects
   useEffect(() => {
@@ -198,10 +219,14 @@ export default function App() {
       }
       return [...prev, user];
     });
+    // Salva ou atualiza no Supabase em segundo plano
+    saveOperadorToSupabase(user);
   };
 
   const handleDeleteUser = (userId: string) => {
     setUsers((prev) => prev.filter((u) => u.id !== userId));
+    // Exclui do Supabase em segundo plano
+    deleteOperadorFromSupabase(userId);
   };
 
   const handleResetSystemData = () => {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserProfile, UserRole, EscalaItem, RecadoMural, FiscalizacaoItem, FeiranteItem } from '../types';
+import { isSupabaseConfigured } from '../lib/supabase';
 import {
   UserCheck,
   ShieldAlert,
@@ -355,9 +356,25 @@ export const MasterView: React.FC<MasterViewProps> = ({
                 Cadastre servidores e defina seus cargos (AGENTE, FISCAL, DIRETOR, MASTER) para liberação de acessos no portal.
               </p>
             </div>
-            <span className="text-xs font-black bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-xl uppercase">
-              {users.length} Servidores
-            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-[10px] font-black px-2.5 py-1 rounded-xl uppercase flex items-center gap-1 ${
+                  isSupabaseConfigured
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                }`}
+                title={
+                  isSupabaseConfigured
+                    ? 'Supabase Conectado: Cadastro e permissões sincronizados em tempo real no banco cloud'
+                    : 'Modo Local / Vercel Env VITE_SUPABASE_URL pendente'
+                }
+              >
+                {isSupabaseConfigured ? '⚡ Supabase On' : '💾 Local Persistence'}
+              </span>
+              <span className="text-xs font-black bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-xl uppercase">
+                {users.length} Servidores
+              </span>
+            </div>
           </div>
 
           {resetMessage && (
