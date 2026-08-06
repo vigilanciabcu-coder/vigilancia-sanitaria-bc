@@ -1,0 +1,6 @@
+{
+  "name": "Portal Vigilância Sanitária BC - Fiscalizações",
+  "description": "Portal da Vigilância Sanitária de Balneário Camboriú com sistema de fiscalizações e vistorias em tempo real, gestão de feiras, agenda e escalas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,512 @@
+import React, { useState } from 'react';
+import { FeiranteItem } from '../types';
+import { BAIRROS_BC } from '../data/mockData';
+import { Plus, Edit2, Search, X, Check, RefreshCw } from 'lucide-react';
+
+interface FeirasViewProps {
+  feiras: FeiranteItem[];
+  onSaveFeirante: (item: FeiranteItem) => void;
+}
+
+export const FeirasView: React.FC<FeirasViewProps> = ({ feiras, onSaveFeirante }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
+
+  const [formItem, setFormItem] = useState<Partial<FeiranteItem>>({
+    id: '',
+    data_prot: '',
+    num_prot: '',
+    feira: '',
+    pasta: '',
+    cpf: '',
+    nome_pf: '',
+    produtos: '',
+    validade: '',
+    rua: '',
+    num: '',
+    bairro: 'Centro',
+    vinculo: 'NÃO',
+    func: '1',
+    abertura: '',
+    cnpj: '',
+    razao: '',
+    rua_api: '',
+    num_api: '',
+    municipio: 'BALNEÁRIO CAMBORIÚ',
+    estado: 'SC',
+    cnae: '',
+    alvara: 'SIM'
+  });
+
+  const [selectedFeirasOpts, setSelectedFeirasOpts] = useState<string[]>([]);
+
+  const openNewForm = () => {
+    setFormItem({
+      id: '',
+      data_prot: new Date().toISOString().split('T')[0],
+      num_prot: `2026/${Math.floor(1000 + Math.random() * 9000)}`,
+      feira: '',
+      pasta: 'A-01',
+      cpf: '',
+      nome_pf: '',
+      produtos: '',
+      validade: '2026-12-31',
+      rua: '',
+      num: '',
+      bairro: 'Centro',
+      vinculo: 'NÃO',
+      func: '1',
+      abertura: new Date().getFullYear().toString(),
+      cnpj: '',
+      razao: '',
+      rua_api: '',
+      num_api: '',
+      municipio: 'BALNEÁRIO CAMBORIÚ',
+      estado: 'SC',
+      cnae: '',
+      alvara: 'SIM'
+    });
+    setSelectedFeirasOpts([]);
+    setModalOpen(true);
+  };
+
+  const openEditForm = (item: FeiranteItem) => {
+    setFormItem(item);
+    const opts = item.feira ? item.feira.split(', ').map((s) => s.trim()) : [];
+    setSelectedFeirasOpts(opts);
+    setModalOpen(true);
+  };
+
+  const toggleFeiraOpt = (val: string) => {
+    const exists = selectedFeirasOpts.some((x) => x.toLowerCase() === val.toLowerCase());
+    if (exists) {
+      setSelectedFeirasOpts(selectedFeirasOpts.filter((x) => x.toLowerCase() !== val.toLowerCase()));
+    } else {
+      setSelectedFeirasOpts([...selectedFeirasOpts, val]);
+    }
+  };
+
+  const handleBuscarCNPJ = async () => {
+    if (!formItem.cnpj) return;
+    setLoadingCnpj(true);
+    try {
+      const res = await fetch(`/api/cnpj/${formItem.cnpj}`);
+      if (res.ok) {
+        const d = await res.json();
+        setFormItem((prev) => ({
+          ...prev,
+          razao: d.razao,
+          municipio: d.municipio,
+          estado: d.estado,
+          rua_api: d.rua_api,
+          num_api: d.num_api,
+          cnae: d.cnae
+        }));
+      }
+    } catch {
+      // Fallback
+    } finally {
+      setLoadingCnpj(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const idToUse = formItem.id || String(Date.now());
+    const feiraStr = selectedFeirasOpts.join(', ');
+
+    const updated: FeiranteItem = {
+      id: idToUse,
+      data_prot: formItem.data_prot || '',
+      num_prot: formItem.num_prot || '',
+      feira: feiraStr,
+      pasta: formItem.pasta || '',
+      cpf: formItem.cpf || '',
+      nome_pf: formItem.nome_pf || '',
+      produtos: formItem.produtos || '',
+      validade: formItem.validade || '',
+      rua: formItem.rua || '',
+      num: formItem.num || '',
+      bairro: formItem.bairro || 'Centro',
+      vinculo: formItem.vinculo || 'NÃO',
+      func: formItem.func || '',
+      abertura: formItem.abertura || '',
+      cnpj: formItem.cnpj || '',
+      razao: formItem.razao || '',
+      rua_api: formItem.rua_api || '',
+      num_api: formItem.num_api || '',
+      municipio: formItem.municipio || 'BALNEÁRIO CAMBORIÚ',
+      estado: formItem.estado || 'SC',
+      cnae: formItem.cnae || '',
+      alvara: formItem.alvara || 'SIM'
+    };
+
+    onSaveFeirante(updated);
+    setModalOpen(false);
+  };
+
+  const filteredFeiras = feiras.filter(
+    (f) =>
+      f.nome_pf.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.num_prot.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.produtos.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.feira.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6 text-left">
+      {/* Top Banner */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm gap-4">
+        <h2 className="text-2xl md:text-3xl font-black text-blue-600 dark:text-blue-400 uppercase italic flex items-center gap-3">
+          <svg viewBox="0 0 24 24" className="h-10 w-10 fill-blue-600 dark:fill-blue-400">
+            <path d="M12 2L2 7v2h20V7L12 2zm-7.5 9v11h3V11h-3zm6 0v11h3V11h-3zm6 0v11h3V11h-3z" />
+          </svg>
+          Gestão de Feiras e Ambulantes
+        </h2>
+
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar feirante..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 w-full"
+            />
+          </div>
+
+          <button
+            onClick={openNewForm}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3 rounded-2xl shadow-lg uppercase text-xs transition cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Novo Cadastro
+          </button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-x-auto shadow-sm text-center">
+        <table className="w-full text-left text-[10px] whitespace-nowrap">
+          <thead className="bg-slate-50 dark:bg-slate-800 font-black uppercase text-slate-500">
+            <tr>
+              <th className="p-3 text-center">ID</th>
+              <th className="p-3">Data Prot.</th>
+              <th className="p-3">Nº Prot.</th>
+              <th className="p-3">Feiras Autorizadas</th>
+              <th className="p-3">Pasta</th>
+              <th className="p-3">Feirante</th>
+              <th className="p-3">Produtos</th>
+              <th className="p-3">Validade</th>
+              <th className="p-3">Rua / Local</th>
+              <th className="p-3 text-center">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {filteredFeiras.length > 0 ? (
+              filteredFeiras.map((r) => (
+                <tr
+                  key={r.id}
+                  onClick={() => openEditForm(r)}
+                  className="hover:bg-blue-50 dark:hover:bg-slate-800 border-b dark:border-slate-800 cursor-pointer transition-colors text-left"
+                >
+                  <td className="p-3 text-[10px] text-slate-500 text-center font-mono">{r.id}</td>
+                  <td className="p-3 text-[10px]">{r.data_prot}</td>
+                  <td className="p-3 text-[10px] font-bold text-blue-600 dark:text-blue-400">{r.num_prot}</td>
+                  <td className="p-3 text-[10px] font-bold text-amber-600 uppercase">{r.feira || '---'}</td>
+                  <td className="p-3 text-[10px] font-bold">{r.pasta}</td>
+                  <td className="p-3 text-[10px] font-bold uppercase">{r.nome_pf}</td>
+                  <td className="p-3 text-[10px] truncate max-w-[150px]">{r.produtos}</td>
+                  <td className="p-3 text-[10px]">{r.validade}</td>
+                  <td className="p-3 text-[10px]">{r.rua || '---'}</td>
+                  <td className="p-3 text-center">
+                    <button className="text-blue-600 hover:text-blue-800 font-bold p-1">
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={10} className="p-8 text-center text-slate-500 italic">
+                  Nenhum feirante encontrado.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal Form */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-5xl max-h-[95vh] overflow-y-auto rounded-[2rem] shadow-2xl border dark:border-slate-700 p-6 md:p-8 text-slate-900 dark:text-white">
+            <div className="flex justify-between items-center mb-6 border-b dark:border-slate-700 pb-4">
+              <h2 className="text-xl md:text-2xl font-black text-blue-600 dark:text-blue-400 uppercase italic flex items-center gap-2.5">
+                <svg viewBox="0 0 24 24" className="h-7 w-7 fill-blue-600 dark:fill-blue-400 shrink-0">
+                  <path d="M12 2L2 7v2h20V7L12 2zm-7.5 9v11h3V11h-3zm6 0v11h3V11h-3zm6 0v11h3V11h-3z" />
+                </svg>
+                <span>{formItem.id ? 'Editar Cadastro de Feirante' : 'Novo Cadastro de Feirante'}</span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="text-red-500 font-black text-2xl hover:text-red-700 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4 text-left">
+              <input type="hidden" value={formItem.id || ''} />
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4">
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Data Protocolo</label>
+                  <input
+                    type="date"
+                    value={formItem.data_prot || ''}
+                    onChange={(e) => setFormItem({ ...formItem, data_prot: e.target.value })}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Nº Protocolo</label>
+                  <input
+                    type="text"
+                    placeholder="000000"
+                    value={formItem.num_prot || ''}
+                    onChange={(e) => setFormItem({ ...formItem, num_prot: e.target.value })}
+                  />
+                </div>
+
+                <div className="md:col-span-8 bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-center flex flex-col justify-center">
+                  <label className="text-[10px] font-black uppercase mb-1 block text-blue-600 dark:text-blue-400">
+                    Feiras Autorizadas
+                  </label>
+                  <div className="flex flex-row items-center justify-between sm:justify-center gap-2 md:gap-4 whitespace-nowrap overflow-x-auto px-1">
+                    {['DA CULTURA', 'DO PESCADOR', 'DA ORLA', 'DA RUA 200'].map((fOpt) => (
+                      <label key={fOpt} className="flex items-center gap-1 text-[10px] font-bold cursor-pointer whitespace-nowrap shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedFeirasOpts.some((x) => x.toLowerCase() === fOpt.toLowerCase())}
+                          onChange={() => toggleFeiraOpt(fOpt)}
+                          className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="uppercase">{fOpt}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4">
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Pasta VISA</label>
+                  <input
+                    type="text"
+                    placeholder="P-000"
+                    value={formItem.pasta || ''}
+                    onChange={(e) => setFormItem({ ...formItem, pasta: e.target.value })}
+                  />
+                </div>
+
+                <div className="md:col-span-3">
+                  <label className="text-[10px] font-bold uppercase block mb-1">CPF</label>
+                  <input
+                    type="text"
+                    placeholder="000.000.000-00"
+                    value={formItem.cpf || ''}
+                    onChange={(e) => setFormItem({ ...formItem, cpf: e.target.value })}
+                  />
+                </div>
+
+                <div className="md:col-span-7">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Nome Pessoa Física</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nome Completo do Feirante"
+                    value={formItem.nome_pf || ''}
+                    onChange={(e) => setFormItem({ ...formItem, nome_pf: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4">
+                <div className="md:col-span-9">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Produtos Autorizados</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Artesanatos, Pães, Queijos, Hortifrúti"
+                    value={formItem.produtos || ''}
+                    onChange={(e) => setFormItem({ ...formItem, produtos: e.target.value })}
+                  />
+                </div>
+
+                <div className="md:col-span-3">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Validade Autorização</label>
+                  <input
+                    type="date"
+                    value={formItem.validade || ''}
+                    onChange={(e) => setFormItem({ ...formItem, validade: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4">
+                <div className="md:col-span-8">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Endereço (Rua)</label>
+                  <input
+                    type="text"
+                    placeholder="Rua / Avenida"
+                    value={formItem.rua || ''}
+                    onChange={(e) => setFormItem({ ...formItem, rua: e.target.value })}
+                  />
+                </div>
+
+                <div className="md:col-span-4">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Nº / Complemento</label>
+                  <input
+                    type="text"
+                    placeholder="Nº, Apto, Sala"
+                    value={formItem.num || ''}
+                    onChange={(e) => setFormItem({ ...formItem, num: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4">
+                <div className="md:col-span-5">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Bairro</label>
+                  <select
+                    value={formItem.bairro || 'Centro'}
+                    onChange={(e) => setFormItem({ ...formItem, bairro: e.target.value })}
+                  >
+                    {BAIRROS_BC.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="md:col-span-3">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Vínculo Comercial (CNPJ)</label>
+                  <select
+                    value={formItem.vinculo || 'NÃO'}
+                    onChange={(e) => setFormItem({ ...formItem, vinculo: e.target.value as 'SIM' | 'NÃO' })}
+                  >
+                    <option value="NÃO">NÃO</option>
+                    <option value="SIM">SIM</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Nº Funcionários</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formItem.func || ''}
+                    onChange={(e) => setFormItem({ ...formItem, func: e.target.value })}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold uppercase block mb-1">Ano Abertura</label>
+                  <input
+                    type="number"
+                    placeholder="AAAA"
+                    value={formItem.abertura || ''}
+                    onChange={(e) => setFormItem({ ...formItem, abertura: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {formItem.vinculo === 'SIM' && (
+                <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-slate-700/50 border border-blue-200 dark:border-slate-600 space-y-4">
+                  <h4 className="text-xs font-black uppercase text-blue-600 dark:text-blue-400">
+                    Dados da Pessoa Jurídica (CNPJ)
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase block mb-1">CNPJ</label>
+                      <div className="flex gap-1">
+                        <input
+                          type="text"
+                          value={formItem.cnpj || ''}
+                          onChange={(e) => setFormItem({ ...formItem, cnpj: e.target.value })}
+                          placeholder="00.000.000/0001-00"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleBuscarCNPJ}
+                          disabled={loadingCnpj}
+                          className="bg-blue-600 text-white px-3 rounded-lg text-[10px] font-black uppercase"
+                        >
+                          {loadingCnpj ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'API'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] font-bold uppercase block mb-1">Razão Social</label>
+                      <input
+                        type="text"
+                        value={formItem.razao || ''}
+                        onChange={(e) => setFormItem({ ...formItem, razao: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase block mb-1">Alvará Sanitário</label>
+                      <select
+                        value={formItem.alvara || 'SIM'}
+                        onChange={(e) =>
+                          setFormItem({ ...formItem, alvara: e.target.value as 'SIM' | 'NÃO' | 'EM ANDAMENTO' })
+                        }
+                      >
+                        <option value="SIM">SIM</option>
+                        <option value="NÃO">NÃO</option>
+                        <option value="EM ANDAMENTO">EM ANDAMENTO</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase block mb-1">Município</label>
+                      <input
+                        type="text"
+                        value={formItem.municipio || ''}
+                        onChange={(e) => setFormItem({ ...formItem, municipio: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] font-bold uppercase block mb-1">CNAE Principal</label>
+                      <input
+                        type="text"
+                        value={formItem.cnae || ''}
+                        onChange={(e) => setFormItem({ ...formItem, cnae: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-6 border-t dark:border-slate-700 flex justify-center">
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-20 rounded-2xl shadow-xl transition uppercase tracking-widest text-xs cursor-pointer"
+                >
+                  SALVAR CADASTRO
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

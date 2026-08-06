@@ -1,0 +1,99 @@
+import React from 'react';
+import { PortalButton, UserProfile } from '../types';
+import { ShieldCheck, Calendar, Microscope, Crown } from 'lucide-react';
+
+interface SidebarProps {
+  buttons: PortalButton[];
+  currentView: string;
+  currentUser: UserProfile | null;
+  onNavigate: (view: 'home' | 'feiras' | 'agenda' | 'master' | 'fiscalizacao') => void;
+  onOpenExternal: (url: string) => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({
+  buttons,
+  currentView,
+  currentUser,
+  onNavigate,
+  onOpenExternal,
+}) => {
+  const isMasterOrDirector = currentUser?.cargo === 'MASTER' || currentUser?.cargo === 'DIRETOR';
+  const todayDay = new Date().getDate();
+
+  const renderIcon = (b: PortalButton) => {
+    if (b.img === 'shield') {
+      return <ShieldCheck className="w-5 h-5 text-emerald-400" />;
+    }
+    if (b.img === 'calendar') {
+      return (
+        <div className="sidebar-cal-icon">
+          <div className="sidebar-cal-header"></div>
+          <span className="sidebar-cal-day">{todayDay}</span>
+        </div>
+      );
+    }
+    if (b.img === 'tent') {
+      return (
+        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-amber-400">
+          <path d="M12 2L2 7v2h20V7L12 2zm-7.5 9v11h3V11h-3zm6 0v11h3V11h-3zm6 0v11h3V11h-3z" />
+        </svg>
+      );
+    }
+    if (b.img === 'lab-icon') {
+      return <Microscope className="w-5 h-5 text-cyan-400" />;
+    }
+    return <img src={b.img} alt={b.nome} className="w-5 h-5 object-contain" />;
+  };
+
+  return (
+    <aside className="sidebar h-full flex flex-col py-6 shadow-xl bg-slate-900 border-r border-slate-800">
+      <nav id="sidebar-nav" className="flex-1 w-full space-y-1.5 px-2 text-white">
+        {buttons.map((b) => {
+          const isActive = b.view && currentView === b.view;
+          return (
+            <button
+              key={b.id}
+              onClick={() => {
+                if (b.acao === 'link') {
+                  onOpenExternal(b.url);
+                } else if (b.view) {
+                  onNavigate(b.view);
+                }
+              }}
+              className={`w-full flex items-center py-2 px-3 rounded-xl transition cursor-pointer ${
+                isActive
+                  ? 'bg-blue-600 text-white font-bold'
+                  : 'hover:bg-slate-800 text-slate-300'
+              }`}
+              title={b.nome}
+            >
+              <div className="w-8 flex justify-center flex-shrink-0">
+                {renderIcon(b)}
+              </div>
+              <span className="sidebar-text">{b.nome}</span>
+            </button>
+          );
+        })}
+
+        {isMasterOrDirector && (
+          <div className="mt-4 pt-4 border-t border-slate-800">
+            <button
+              onClick={() => onNavigate('master')}
+              className={`w-full flex items-center py-2 px-3 rounded-xl transition cursor-pointer ${
+                currentView === 'master'
+                  ? 'bg-purple-600 text-white font-bold'
+                  : 'hover:bg-slate-800 text-purple-300'
+              }`}
+              title="Painel Master / Diretor"
+            >
+              <div className="w-8 flex justify-center flex-shrink-0">
+                <Crown className="w-5 h-5 text-amber-400" />
+              </div>
+              <span className="sidebar-text font-black">PAINEL MASTER</span>
+            </button>
+          </div>
+        )}
+      </nav>
+    </aside>
+  );
+};

@@ -1,0 +1,255 @@
+@import "tailwindcss";
+
+/* --- CONFIGURAÇÃO DA SIDEBAR (BARRA LATERAL) --- */
+.sidebar { 
+    width: 64px; 
+    transition: width 0.3s ease; 
+    overflow-x: hidden; 
+    overflow-y: auto; 
+    flex-shrink: 0; 
+    background-color: #0f172a; 
+    z-index: 50; 
+}
+.sidebar::-webkit-scrollbar { display: none; }
+.sidebar:hover { width: 240px; }
+
+.sidebar-text { 
+    opacity: 0; 
+    transition: opacity 0.2s; 
+    white-space: nowrap; 
+    margin-left: 12px; 
+    font-size: 10px; 
+    font-weight: bold; 
+    color: #cbd5e1; 
+    text-transform: uppercase; 
+}
+.sidebar:hover .sidebar-text { opacity: 1; }
+
+/* Ícones dinâmicos na sidebar */
+.sidebar-cal-icon {
+    width: 24px;
+    height: 24px;
+    background: white;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.sidebar-cal-header {
+    width: 100%;
+    height: 6px;
+    background: #ef4444;
+    position: absolute;
+    top: 0;
+}
+.sidebar-cal-day {
+    font-size: 10px;
+    font-weight: 900;
+    color: #1e293b;
+    margin-top: 4px;
+}
+
+/* --- GRID DE BOTÕES E CARDS --- */
+.grid-portal { 
+    display: grid; 
+    gap: 0.6rem; 
+    grid-template-columns: repeat(2, 1fr); 
+    max-width: 1050px; 
+    margin: 0 auto; 
+}
+@media (min-width: 640px) {
+    .grid-portal { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1024px) { 
+    .grid-portal { grid-template-columns: repeat(6, 1fr); } 
+}
+
+.card-app { 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    cursor: pointer; 
+    border-radius: 0.8rem; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    aspect-ratio: 1.15 / 1; 
+    background: white; 
+    border: 1px solid #e2e8f0; 
+    border-bottom: 4px solid #2563eb; 
+    padding: 0.5rem; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+    position: relative;
+    overflow: hidden;
+}
+.dark .card-app { background: #1e293b; border-color: #334155; border-bottom-color: #2563eb; }
+
+/* Efeito Hover nas Logos (Imagens e SVGs) */
+.card-app img, .card-app svg { 
+    height: 3.2rem; 
+    width: auto; 
+    object-fit: contain; 
+    transition: all 0.3s ease; 
+}
+.card-app:hover { 
+    transform: translateY(-5px); 
+    border-bottom-color: #3b82f6; 
+    box-shadow: 0 15px 30px -5px rgba(59, 130, 246, 0.2); 
+}
+.card-app:hover img, .card-app:hover svg { 
+    transform: scale(1.12); 
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)); 
+}
+
+.card-title { 
+    font-weight: 900; 
+    text-transform: uppercase; 
+    color: #1e3a8a; 
+    font-size: 0.72rem; 
+    text-align: center; 
+    margin-top: 8px; 
+    line-height: 1.1; 
+}
+.dark .card-title { color: #f1f5f9; }
+
+/* --- RODAPÉ E ANIMAÇÃO MARQUEE LENTA --- */
+.footer-bar { 
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 40px; 
+    background: #000; 
+    color: white; 
+    display: flex; 
+    align-items: center; 
+    z-index: 100; 
+    overflow: hidden; 
+}
+.relogio-windows { 
+    width: 115px; 
+    height: 100%; 
+    background: #111; 
+    border-left: 1px solid #333; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    flex-shrink: 0; 
+    z-index: 110; 
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.marquee-box { flex: 1; overflow: hidden; position: relative; display: flex; align-items: center; }
+#marquee-text { 
+    display: inline-block; 
+    white-space: nowrap; 
+    font-weight: 800; 
+    text-transform: uppercase; 
+    font-size: 10px; 
+    letter-spacing: 0.05em;
+    padding-left: 100%; 
+    animation: slide-marquee 45s linear infinite; 
+}
+@keyframes slide-marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+}
+
+/* --- CALENDÁRIO E AGENDA --- */
+.dia-calendario { 
+    border: 1px solid #e2e8f0; 
+    min-height: 110px; 
+    padding: 4px; 
+    display: flex; 
+    flex-direction: column; 
+    background: white; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    overflow: hidden; 
+}
+.dark .dia-calendario { border-color: #1e293b; background: #0f172a; }
+.dia-calendario:hover { background: #f1f5f9; border-color: #3b82f6; }
+
+.tag-evento { 
+    font-size: 7px; 
+    padding: 2px 4px; 
+    border-radius: 3px; 
+    margin-top: 2px; 
+    font-weight: 800; 
+    text-transform: uppercase; 
+    border-left: 3px solid; 
+    overflow: hidden; 
+    white-space: nowrap; 
+    text-overflow: ellipsis; 
+}
+.tipo-plantao { background: #dbeafe; color: #1e40af; border-color: #3b82f6; }
+.tipo-evento { background: #fef9c3; color: #854d0e; border-color: #facc15; }
+.tipo-feriado { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
+.tipo-facultativo { background: #f3e8ff; color: #6b21a8; border-color: #a855f7; }
+
+/* Ícone Dinâmico de Calendário */
+.calendar-icon { width: 42px; height: 42px; background: white; border: 2px solid #334155; border-radius: 8px; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.calendar-icon-header { width: 100%; height: 12px; background: #ef4444; position: absolute; top: 0; }
+.calendar-icon-day { font-size: 18px; font-weight: 900; color: #1e293b; margin-top: 8px; }
+
+/* --- OUTROS ELEMENTOS --- */
+.hidden { display: none !important; }
+
+.chat-container { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    background: #f8fafc; 
+    border-radius: 1rem; 
+    border: 1px solid #e2e8f0; 
+    overflow: hidden; 
+}
+.dark .chat-container { background: #0f172a; border-color: #1e293b; }
+
+.ad-wrapper { 
+    width: 100%; 
+    display: flex; 
+    justify-content: center; 
+    background: transparent; 
+    padding: 10px 0; 
+    margin-bottom: 40px; 
+}
+
+input, select, textarea { 
+    border: 1px solid #cbd5e1; 
+    border-radius: 0.5rem; 
+    padding: 0.6rem; 
+    background: #fff; 
+    font-size: 11px; 
+    width: 100%; 
+    outline: none; 
+}
+.dark input, .dark select, .dark textarea { 
+    background: #334155; 
+    border-color: #475569; 
+    color: white; 
+}
+
+/* Print styling for Sanitary Terms */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-term, #printable-term * {
+    visibility: visible;
+  }
+  #printable-term {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 20px;
+    background: white !important;
+    color: black !important;
+  }
+}
