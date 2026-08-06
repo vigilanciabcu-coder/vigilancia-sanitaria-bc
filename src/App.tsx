@@ -185,6 +185,11 @@ export default function App() {
     });
   };
 
+  const handleSyncFeirantesFromSheets = (items: FeiranteItem[]) => {
+    setFeiras(items);
+    localStorage.setItem('visa_feiras', JSON.stringify(items));
+  };
+
   const handleSaveEscalaItem = (item: EscalaItem) => {
     setEscala((prev) => [item, ...prev]);
   };
@@ -213,7 +218,7 @@ export default function App() {
     setFiscalizacoes((prev) => [item, ...prev]);
   };
 
-  const handleSaveUser = (user: UserProfile) => {
+  const handleSaveUser = async (user: UserProfile) => {
     setUsers((prev) => {
       const idx = prev.findIndex((u) => u.id === user.id);
       if (idx >= 0) {
@@ -223,8 +228,12 @@ export default function App() {
       }
       return [...prev, user];
     });
-    // Salva ou atualiza no Supabase em segundo plano
-    saveOperadorToSupabase(user);
+    // Salva ou atualiza no Supabase e re-busca a lista atualizada
+    await saveOperadorToSupabase(user);
+    const remote = await fetchOperadoresFromSupabase();
+    if (remote && remote.length > 0) {
+      setUsers(remote);
+    }
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -298,7 +307,11 @@ export default function App() {
               )}
 
               {currentView === 'feiras' && (
-                <FeirasView feiras={feiras} onSaveFeirante={handleSaveFeirante} />
+                <FeirasView
+                  feiras={feiras}
+                  onSaveFeirante={handleSaveFeirante}
+                  onSyncFeirantesFromSheets={handleSyncFeirantesFromSheets}
+                />
               )}
 
               {currentView === 'agenda' && (

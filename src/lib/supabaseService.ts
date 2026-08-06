@@ -42,25 +42,46 @@ export async function fetchOperadoresFromSupabase(): Promise<UserProfile[] | nul
   return null;
 }
 
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export async function saveOperadorToSupabase(user: UserProfile): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false;
   try {
-    const { error } = await supabase.from('operadores').upsert(
-      {
-        id: user.id,
-        email: user.email,
-        nome_completo: user.nome_completo,
-        data_nascimento: user.data_nascimento,
-        cargo: user.cargo,
-        matricula: user.matricula,
-        senha: user.senha || '123456'
-      },
-      { onConflict: 'id' }
-    );
+    let validId = user.id;
+    // Se não for UUID válido de 36 caracteres, tenta criar um UUID válido
+    if (!validId || validId.length < 30 || validId.startsWith('u')) {
+      validId = generateUUID();
+    }
+
+    const payload = {
+      id: validId,
+      email: user.email,
+      nome_completo: user.nome_completo,
+      data_nascimento: user.data_nascimento || '1990-01-01',
+      cargo: user.cargo,
+      matricula: user.matricula || '',
+      senha: user.senha || '123456'
+    };
+
+    const { error } = await supabase.from('operadores').upsert(payload, { onConflict: 'id' });
 
     if (error) {
-      console.error('Erro ao salvar operador no Supabase:', error.message);
-      return false;
+      console.warn('Upsert com ID falhou no Supabase:', error.message, 'Tentando salvar sem ID...');
+      const { id, ...payloadWithoutId } = payload;
+      const { error: insertErr } = await supabase.from('operadores').insert([payloadWithoutId]);
+      if (insertErr) {
+        console.error('Erro ao salvar operador no Supabase:', insertErr.message);
+        return false;
+      }
     }
     return true;
   } catch (err) {

@@ -1,17 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FeiranteItem } from '../types';
 import { BAIRROS_BC } from '../data/mockData';
-import { Plus, Edit2, Search, X, Check, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Search, X, Check, RefreshCw, FileSpreadsheet, ExternalLink, Settings } from 'lucide-react';
+import {
+  fetchFeirantesFromSheets,
+  saveFeiranteToSheets,
+  getSheetsWebhookUrl,
+  setSheetsWebhookUrl
+} from '../lib/googleSheetsService';
 
 interface FeirasViewProps {
   feiras: FeiranteItem[];
   onSaveFeirante: (item: FeiranteItem) => void;
+  onSyncFeirantesFromSheets?: (items: FeiranteItem[]) => void;
 }
 
-export const FeirasView: React.FC<FeirasViewProps> = ({ feiras, onSaveFeirante }) => {
+export const FeirasView: React.FC<FeirasViewProps> = ({
+  feiras,
+  onSaveFeirante,
+  onSyncFeirantesFromSheets
+}) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [syncingSheets, setSyncingSheets] = useState(false);
+  const [sheetsNotice, setSheetsNotice] = useState<string | null>(null);
+  const [configUrlModal, setConfigUrlModal] = useState(false);
+  const [webhookUrlInput, setWebhookUrlInput] = useState(() => getSheetsWebhookUrl());
+
+  // Sincronização inicial ao carregar a tela
+  useEffect(() => {
+    handleSyncFromSheets(true);
+  }, []);
+
+  const handleSyncFromSheets = async (silent = false) => {
+    setSyncingSheets(true);
+    try {
+      const dataFromSheets = await fetchFeirantesFromSheets();
+      if (dataFromSheets && dataFromSheets.length > 0) {
+        if (onSyncFeirantesFromSheets) {
+          onSyncFeirantesFromSheets(dataFromSheets);
+        }
+        if (!silent) {
+          setSheetsNotice(`✨ ${dataFromSheets.length} feirantes sincronizados diretamente do Google Sheets!`);
+          setTimeout(() => setSheetsNotice(null), 4000);
+        }
+      } else if (!silent) {
+        setSheetsNotice('⚠️ Nenhuma planilha retornou dados ou o Webhook Google Sheets não respondeu.');
+        setTimeout(() => setSheetsNotice(null), 4000);
+      }
+    } catch (e) {
+      if (!silent) console.warn('Erro ao sincronizar planilha:', e);
+    } finally {
+      setSyncingSheets(false);
+    }
+  };
+
+  const handleSaveWebhookUrl = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSheetsWebhookUrl(webhookUrlInput);
+    setConfigUrlModal(false);
+    setSheetsNotice('URL do Webhook do Google Sheets atualizada!');
+    setTimeout(() => setSheetsNotice(null), 3000);
+    handleSyncFromSheets(false);
+  };
 
   const [formItem, setFormItem] = useState<Partial<FeiranteItem>>({
     id: '',
@@ -111,7 +163,7 @@ export const FeirasView: React.FC<FeirasViewProps> = ({ feiras, onSaveFeirante }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const idToUse = formItem.id || String(Date.now());
     const feiraStr = selectedFeirasOpts.join(', ');
@@ -143,6 +195,16 @@ export const FeirasView: React.FC<FeirasViewProps> = ({ feiras, onSaveFeirante }
     };
 
     onSaveFeirante(updated);
+
+    // Salva no Google Sheets via Webhook
+    const savedSheets = await saveFeiranteToSheets(updated);
+    if (savedSheets) {
+      setSheetsNotice(`✅ Feirante "${updated.nome_pf}" salvo com sucesso no Google Sheets!`);
+    } else {
+      setSheetsNotice(`💾 Feirante "${updated.nome_pf}" salvo localmente!`);
+    }
+    setTimeout(() => setSheetsNotice(null), 4000);
+
     setModalOpen(false);
   };
 
@@ -158,33 +220,70 @@ export const FeirasView: React.FC<FeirasViewProps> = ({ feiras, onSaveFeirante }
     <div className="max-w-7xl mx-auto space-y-6 text-left">
       {/* Top Banner */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm gap-4">
-        <h2 className="text-2xl md:text-3xl font-black text-blue-600 dark:text-blue-400 uppercase italic flex items-center gap-3">
-          <svg viewBox="0 0 24 24" className="h-10 w-10 fill-blue-600 dark:fill-blue-400">
-            <path d="M12 2L2 7v2h20V7L12 2zm-7.5 9v11h3V11h-3zm6 0v11h3V11h-3zm6 0v11h3V11h-3z" />
-          </svg>
-          Gestão de Feiras e Ambulantes
-        </h2>
+        <div>
+          <h2 className="text-2xl md:text-3xl font-black text-blue-600 dark:text-blue-400 uppercase italic flex items-center gap-3">
+            <svg viewBox="0 0 24 24" className="h-10 w-10 fill-blue-600 dark:fill-blue-400">
+              <path d="M12 2L2 7v2h20V7L12 2zm-7.5 9v11h3V11h-3zm6 0v11h3V11h-3zm6 0v11h3V11h-3z" />
+            </svg>
+            Gestão de Feiras e Ambulantes
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-1 flex items-center gap-1.5">
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            Sincronizado automaticamente com a Planilha Google Sheets
+          </p>
+        </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
+        <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap">
+          <div className="relative flex-1 md:w-56">
             <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
             <input
               type="text"
               placeholder="Buscar feirante..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 w-full"
+              className="pl-9 w-full text-xs"
             />
           </div>
 
+          {/* Sincronizar com Google Sheets */}
+          <button
+            type="button"
+            onClick={() => handleSyncFromSheets(false)}
+            disabled={syncingSheets}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-3 rounded-2xl shadow uppercase text-xs transition cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+            title="Atualizar dados da planilha do Google Sheets"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncingSheets ? 'animate-spin' : ''}`} />
+            {syncingSheets ? 'Sincronizando...' : 'Google Sheets'}
+          </button>
+
+          {/* Configurar Webhook URL */}
+          <button
+            type="button"
+            onClick={() => setConfigUrlModal(true)}
+            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold p-3 rounded-2xl transition cursor-pointer shrink-0"
+            title="Configurar URL do Webhook do Google Sheets"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+
           <button
             onClick={openNewForm}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3 rounded-2xl shadow-lg uppercase text-xs transition cursor-pointer flex items-center gap-1.5 shrink-0"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-black px-5 py-3 rounded-2xl shadow-lg uppercase text-xs transition cursor-pointer flex items-center gap-1.5 shrink-0"
           >
             <Plus className="w-4 h-4" /> Novo Cadastro
           </button>
         </div>
       </div>
+
+      {sheetsNotice && (
+        <div className="p-3 bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 rounded-2xl text-xs font-bold transition flex items-center justify-between">
+          <span>{sheetsNotice}</span>
+          <button onClick={() => setSheetsNotice(null)} className="text-emerald-700 dark:text-emerald-400 hover:opacity-75">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-x-auto shadow-sm text-center">
@@ -501,6 +600,56 @@ export const FeirasView: React.FC<FeirasViewProps> = ({ feiras, onSaveFeirante }
                   className="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-20 rounded-2xl shadow-xl transition uppercase tracking-widest text-xs cursor-pointer"
                 >
                   SALVAR CADASTRO
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuração do Google Sheets Webhook */}
+      {configUrlModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-xl w-full p-6 space-y-4 text-left shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex justify-between items-center border-b pb-3 dark:border-slate-700">
+              <h3 className="text-base font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-600" /> Configurar Webhook Google Sheets
+              </h3>
+              <button onClick={() => setConfigUrlModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+              Informe a URL do App Script (Macro do Google Sheets) responsável por receber e ler os cadastros de feirantes em tempo real:
+            </p>
+
+            <form onSubmit={handleSaveWebhookUrl} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">URL do Webhook (Google Apps Script /exec)</label>
+                <input
+                  type="text"
+                  value={webhookUrlInput}
+                  onChange={(e) => setWebhookUrlInput(e.target.value)}
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  className="w-full text-xs font-mono"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setConfigUrlModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 shadow uppercase"
+                >
+                  Salvar e Testar Sincronia
                 </button>
               </div>
             </form>
