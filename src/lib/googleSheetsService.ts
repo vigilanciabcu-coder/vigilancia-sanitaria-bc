@@ -2,7 +2,7 @@ import { FeiranteItem } from '../types';
 
 // Webhook padrão do Google Apps Script
 export const DEFAULT_SHEETS_WEBHOOK_URL =
-  'https://script.google.com/macros/s/AKfycbyaTV2FDyJ2-tC5l7OXiEvD5DVw2QxH_CHO_rHKmdnYxu8bqDQapmP5K9h6C5TEaWWXTQ/exec';
+  'https://script.google.com/macros/s/AKfycby8SSrv45Hvn7dISRonoyaoe0ffLu8xtwzTB2lWZL09RSqHN-j9RfyDfDHP31nEnVC-Aw/exec';
 
 export function getSheetsWebhookUrl(): string {
   return localStorage.getItem('visa_sheets_webhook_url') || DEFAULT_SHEETS_WEBHOOK_URL;
