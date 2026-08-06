@@ -220,19 +220,59 @@
     margin-bottom: 40px; 
 }
 
+/* --- FORMULÁRIOS E INPUTS DE ALTA VISIBILIDADE --- */
 input, select, textarea { 
-    border: 1px solid #cbd5e1; 
-    border-radius: 0.5rem; 
-    padding: 0.6rem; 
-    background: #fff; 
-    font-size: 11px; 
+    border: 1.5px solid #94a3b8; 
+    border-radius: 0.6rem; 
+    padding: 0.65rem 0.8rem; 
+    background-color: #ffffff; 
+    color: #0f172a !important; 
+    font-size: 13px !important; 
+    font-weight: 600 !important; 
     width: 100%; 
     outline: none; 
+    transition: all 0.2s ease-in-out;
 }
+
+input::placeholder, select::placeholder, textarea::placeholder {
+    color: #64748b !important;
+    font-weight: 500 !important;
+    opacity: 1 !important;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+}
+
+/* Modo Escuro para Inputs */
 .dark input, .dark select, .dark textarea { 
-    background: #334155; 
-    border-color: #475569; 
-    color: white; 
+    background-color: #1e293b !important; 
+    border-color: #475569 !important; 
+    color: #f8fafc !important; 
+}
+
+.dark input::placeholder, .dark select::placeholder, .dark textarea::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1 !important;
+}
+
+.dark input:focus, .dark select:focus, .dark textarea:focus {
+    border-color: #3b82f6 !important;
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+label {
+    color: #1e293b;
+    font-weight: 700;
+}
+
+.dark label {
+    color: #e2e8f0;
 }
 
 /* Print styling for Sanitary Terms */
