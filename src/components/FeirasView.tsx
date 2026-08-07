@@ -140,20 +140,23 @@ export const FeirasView: React.FC<FeirasViewProps> = ({
   };
 
   const handleBuscarCNPJ = async () => {
-    if (!formItem.cnpj) return;
+    const rawVal = formItem.cnpj || '';
+    const cleanVal = rawVal.replace(/\D/g, '');
+    if (!cleanVal) return;
+
     setLoadingCnpj(true);
     try {
-      const res = await fetch(`/api/cnpj/${formItem.cnpj}`);
+      const res = await fetch(`/api/cnpj/${cleanVal}`);
       if (res.ok) {
         const d = await res.json();
         setFormItem((prev) => ({
           ...prev,
-          razao: d.razao,
-          municipio: d.municipio,
-          estado: d.estado,
-          rua_api: d.rua_api,
-          num_api: d.num_api,
-          cnae: d.cnae
+          razao: d.razao || prev.razao,
+          municipio: d.municipio || 'BALNEÁRIO CAMBORIÚ',
+          estado: d.estado || 'SC',
+          rua_api: d.rua_api || prev.rua_api,
+          num_api: d.num_api || prev.num_api,
+          cnae: d.cnae || prev.cnae
         }));
       }
     } catch {

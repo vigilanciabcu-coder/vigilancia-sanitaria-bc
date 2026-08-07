@@ -120,3 +120,116 @@ export async function seedInitialOperadoresIfEmpty(initialUsers: UserProfile[]) 
     console.warn('Semeação de operadores ignorada:', e);
   }
 }
+
+// ==========================================
+// 2. FISCALIZAÇÕES (REGISTRO E TEMPO REAL)
+// ==========================================
+
+export async function fetchFiscalizacoesFromSupabase(): Promise<FiscalizacaoItem[] | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('fiscalizacoes')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Supabase [fiscalizacoes] retorno:', error.message);
+      return null;
+    }
+
+    if (data && data.length > 0) {
+      return data.map((item: any) => ({
+        id: item.id || generateUUID(),
+        protocolo: item.protocolo || '',
+        dataHora: item.data_hora || item.dataHora || new Date().toISOString(),
+        fiscalId: item.fiscal_id || item.fiscalId || '',
+        fiscalNome: item.fiscal_nome || item.fiscalNome || 'Fiscal Sanitário',
+        estabelecimento: typeof item.estabelecimento === 'string' ? JSON.parse(item.estabelecimento) : (item.estabelecimento || {
+          nomeFantasia: '',
+          razaoSocial: '',
+          cnpjCpf: '',
+          tipo: 'Outro',
+          bairro: 'Centro',
+          endereco: '',
+          numero: '',
+          responsavel: '',
+          telefone: ''
+        }),
+        tipoVistoria: item.tipo_vistoria || item.tipoVistoria || 'ROTINA',
+        risco: item.risco || 'MÉDIO',
+        status: item.status || 'CONCLUIDA',
+        checklists: typeof item.checklists === 'string' ? JSON.parse(item.checklists) : (item.checklists || []),
+        irregularidadesEncontradas: typeof item.irregularidades === 'string' ? JSON.parse(item.irregularidades) : (item.irregularidades || item.irregularidadesEncontradas || []),
+        medidasAdotadas: item.medidas_adotadas || item.medidasAdotadas || '',
+        prazoAdequacaoDias: item.prazo_adequacao_dias || item.prazoAdequacaoDias || 0,
+        observacoesFiscais: item.observacoes_fiscais || item.observacoesFiscais || '',
+        fotosUrl: typeof item.fotos_url === 'string' ? JSON.parse(item.fotos_url) : (item.fotos_url || item.fotosUrl || []),
+        assinaturaInspector: item.assinatura_inspector || item.assinaturaInspector || '',
+        assinaturaResponsavel: item.assinatura_responsavel || item.assinaturaResponsavel || '',
+        coordenadas: typeof item.coordenadas === 'string' ? JSON.parse(item.coordenadas) : item.coordenadas,
+        parecerIA: item.parecer_ia || item.parecerIA || ''
+      }));
+    }
+  } catch (err) {
+    console.warn('Erro ao carregar fiscalizações do Supabase:', err);
+  }
+  return null;
+}
+
+export async function saveFiscalizacaoToSupabase(item: FiscalizacaoItem): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    let validId = item.id;
+    if (!validId || validId.length < 30 || validId.startsWith('fisc-')) {
+      validId = generateUUID();
+    }
+
+    const payload = {
+      id: validId,
+      protocolo: item.protocolo,
+      data_hora: item.dataHora,
+      fiscal_id: item.fiscalId,
+      fiscal_nome: item.fiscalNome,
+      estabelecimento: item.estabelecimento,
+      tipo_vistoria: item.tipoVistoria,
+      risco: item.risco,
+      status: item.status,
+      checklists: item.checklists,
+      irregularidades: item.irregularidadesEncontradas,
+      medidas_adotadas: item.medidasAdotadas,
+      prazo_adequacao_dias: item.prazoAdequacaoDias || 0,
+      observacoes_fiscais: item.observacoesFiscais,
+      fotos_url: item.fotosUrl,
+      assinatura_inspector: item.assinaturaInspector || '',
+      assinatura_responsavel: item.assinaturaResponsavel || '',
+      coordenadas: item.coordenadas || null,
+      parecer_ia: item.parecerIA || ''
+    };
+
+    const { error } = await supabase.from('fiscalizacoes').upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      console.warn('Upsert de fiscalização falhou com esquema detalhado:', error.message, 'Tentando modelo simplificado JSON...');
+      // Tentativa de fallback simplificada caso a tabela tenha colunas genéricas
+      const fallbackPayload = {
+        id: validId,
+        protocolo: item.protocolo,
+        fiscal_nome: item.fiscalNome,
+        status: item.status,
+        dados_json: JSON.stringify(item)
+      };
+      const { error: fallbackErr } = await supabase.from('fiscalizacoes').upsert(fallbackPayload, { onConflict: 'id' });
+      if (fallbackErr) {
+        console.error('Erro ao salvar fiscalização no Supabase:', fallbackErr.message);
+        return false;
+      }
+    }
+    console.log('Fiscalização salva com sucesso no Supabase!');
+    return true;
+  } catch (err) {
+    console.error('Exceção ao salvar fiscalização no Supabase:', err);
+    return false;
+  }
+}
+

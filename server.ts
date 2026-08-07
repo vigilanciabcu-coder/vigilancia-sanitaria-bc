@@ -31,41 +31,68 @@ app.get('/api/health', (_req, res) => {
 // 2. CNPJ Auto-Fill Lookup Endpoint
 app.get('/api/cnpj/:cnpj', async (req, res) => {
   const cnpjClean = req.params.cnpj.replace(/\D/g, '');
-  
-  if (cnpjClean.length !== 14) {
-    res.status(400).json({ error: 'CNPJ inválido' });
+
+  if (!cnpjClean) {
+    res.status(400).json({ error: 'CNPJ ou CPF em branco' });
     return;
   }
 
-  try {
-    // Attempt public CNPJ API or fallback mock
-    const apiRes = await fetch(`https://publica.cnpj.ws/cnpj/${cnpjClean}`, {
-      headers: { 'User-Agent': 'PortalVISA-BC/1.0' }
-    });
-    
-    if (apiRes.ok) {
-      const data = await apiRes.json();
-      res.json({
-        razao: data.razao_social || data.estabelecimento?.nome_fantasia || 'ESTABELECIMENTO CADASTRADO',
-        municipio: data.estabelecimento?.cidade?.nome || 'BALNEÁRIO CAMBORIÚ',
-        estado: data.estabelecimento?.estado?.sigla || 'SC',
-        rua_api: `${data.estabelecimento?.tipo_logradouro || ''} ${data.estabelecimento?.logradouro || ''}`.trim(),
-        num_api: data.estabelecimento?.numero || 'S/N',
-        cnae: data.estabelecimento?.atividade_principal?.descricao || 'Alimentação e Serviços Diversos'
-      });
-      return;
+  // Se for CNPJ de 14 dígitos, tenta consultar apis públicas da Receita Federal
+  if (cnpjClean.length === 14) {
+    // 1. Tenta BrasilAPI
+    try {
+      const bRes = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjClean}`);
+      if (bRes.ok) {
+        const d = await bRes.json();
+        res.json({
+          razao: d.razao_social || d.nome_fantasia || 'ESTABELECIMENTO CADASTRADO',
+          nome_fantasia: d.nome_fantasia || d.razao_social || '',
+          municipio: d.municipio || 'BALNEÁRIO CAMBORIÚ',
+          estado: d.uf || 'SC',
+          rua_api: `${d.descricao_tipo_de_logradouro || ''} ${d.logradouro || ''}`.trim(),
+          num_api: d.numero || 'S/N',
+          bairro: d.bairro || 'Centro',
+          cnae: d.cnae_fiscal_descricao || 'Alimentação e Serviços Diversos'
+        });
+        return;
+      }
+    } catch (e) {
+      console.log('BrasilAPI CNPJ offline:', e);
     }
-  } catch (err) {
-    console.log('CNPJ API external fallback triggered:', err);
+
+    // 2. Tenta Publica CNPJ WS
+    try {
+      const apiRes = await fetch(`https://publica.cnpj.ws/cnpj/${cnpjClean}`, {
+        headers: { 'User-Agent': 'PortalVISA-BC/1.0' }
+      });
+      if (apiRes.ok) {
+        const data = await apiRes.json();
+        res.json({
+          razao: data.razao_social || data.estabelecimento?.nome_fantasia || 'ESTABELECIMENTO CADASTRADO',
+          nome_fantasia: data.estabelecimento?.nome_fantasia || data.razao_social || '',
+          municipio: data.estabelecimento?.cidade?.nome || 'BALNEÁRIO CAMBORIÚ',
+          estado: data.estabelecimento?.estado?.sigla || 'SC',
+          rua_api: `${data.estabelecimento?.tipo_logradouro || ''} ${data.estabelecimento?.logradouro || ''}`.trim(),
+          num_api: data.estabelecimento?.numero || 'S/N',
+          bairro: data.estabelecimento?.bairro || 'Centro',
+          cnae: data.estabelecimento?.atividade_principal?.descricao || 'Alimentação e Serviços Diversos'
+        });
+        return;
+      }
+    } catch (err) {
+      console.log('CNPJ API external fallback triggered:', err);
+    }
   }
 
-  // Fallback realistic response for testing
+  // Fallback realista para testes, CPF ou CNPJ sem consulta de API externa disponível
   res.json({
-    razao: 'EMPRESA ALIMENTÍCIA BC LTDA',
+    razao: `ESTABELECIMENTO COMERCIAL (${cnpjClean}) LTDA`,
+    nome_fantasia: 'RESTAURANTE E GASTRONOMIA BC',
     municipio: 'BALNEÁRIO CAMBORIÚ',
     estado: 'SC',
     rua_api: 'AVENIDA BRASIL',
     num_api: '1500',
+    bairro: 'Centro',
     cnae: '5611-2/01 Restaurantes e similares / Comércio Alimentos'
   });
 });

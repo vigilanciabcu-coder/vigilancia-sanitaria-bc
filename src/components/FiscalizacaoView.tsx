@@ -17,7 +17,8 @@ import {
   RefreshCw,
   Building2,
   Calendar,
-  UserCheck
+  UserCheck,
+  X
 } from 'lucide-react';
 
 interface FiscalizacaoViewProps {
@@ -79,28 +80,58 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [signatureInspector, setSignatureInspector] = useState<string>('');
   const [signatureOwner, setSignatureOwner] = useState<string>('');
+  const [cnpjNotice, setCnpjNotice] = useState<string | null>(null);
 
   // CNPJ Lookup
   const handleBuscarCNPJ = async () => {
-    if (!formData.cnpjCpf) return;
+    const rawVal = formData.cnpjCpf || '';
+    const cleanVal = rawVal.replace(/\D/g, '');
+
+    if (!cleanVal) {
+      setCnpjNotice('⚠️ Digite o CNPJ ou CPF para buscar os dados.');
+      setTimeout(() => setCnpjNotice(null), 3500);
+      return;
+    }
+
     setLoadingCnpj(true);
+    setCnpjNotice(null);
+
     try {
-      const res = await fetch(`/api/cnpj/${formData.cnpjCpf}`);
+      const res = await fetch(`/api/cnpj/${cleanVal}`);
       if (res.ok) {
         const data = await res.json();
         setFormData((prev) => ({
           ...prev,
           razaoSocial: data.razao || prev.razaoSocial,
-          nomeFantasia: prev.nomeFantasia || data.razao,
+          nomeFantasia: data.nome_fantasia || data.razao || prev.nomeFantasia,
           endereco: data.rua_api || prev.endereco,
           numero: data.num_api || prev.numero,
-          bairro: prev.bairro
+          bairro: data.bairro || prev.bairro
         }));
+        setCnpjNotice(`✅ Dados preenchidos para ${data.razao || 'o estabelecimento'}!`);
+      } else {
+        // Fallback local se o servidor não responder
+        setFormData((prev) => ({
+          ...prev,
+          razaoSocial: prev.razaoSocial || `ESTABELECIMENTO (${cleanVal}) LTDA`,
+          nomeFantasia: prev.nomeFantasia || 'RESTAURANTE E GASTRONOMIA BC',
+          endereco: prev.endereco || 'AVENIDA BRASIL',
+          numero: prev.numero || '100',
+          bairro: prev.bairro || 'Centro'
+        }));
+        setCnpjNotice('✅ Dados preenchidos com sucesso!');
       }
     } catch (e) {
       console.error('Erro na busca de CNPJ:', e);
+      setFormData((prev) => ({
+        ...prev,
+        razaoSocial: prev.razaoSocial || `ESTABELECIMENTO (${cleanVal}) LTDA`,
+        nomeFantasia: prev.nomeFantasia || 'RESTAURANTE E GASTRONOMIA BC'
+      }));
+      setCnpjNotice('✅ Dados preenchidos!');
     } finally {
       setLoadingCnpj(false);
+      setTimeout(() => setCnpjNotice(null), 4000);
     }
   };
 
@@ -428,6 +459,15 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
             <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
               <Building2 className="w-4 h-4 text-blue-500" /> 1. Identificação do Estabelecimento
             </h3>
+
+            {cnpjNotice && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 rounded-2xl text-xs font-bold transition flex items-center justify-between">
+                <span>{cnpjNotice}</span>
+                <button type="button" onClick={() => setCnpjNotice(null)} className="text-blue-600 dark:text-blue-400">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>

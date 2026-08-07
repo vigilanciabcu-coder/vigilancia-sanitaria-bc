@@ -32,7 +32,9 @@ import {
   fetchOperadoresFromSupabase,
   saveOperadorToSupabase,
   deleteOperadorFromSupabase,
-  seedInitialOperadoresIfEmpty
+  seedInitialOperadoresIfEmpty,
+  fetchFiscalizacoesFromSupabase,
+  saveFiscalizacaoToSupabase
 } from './lib/supabaseService';
 
 const PORTAL_BUTTONS: PortalButton[] = [
@@ -105,7 +107,7 @@ export default function App() {
 
   // Sync com Supabase no carregamento
   useEffect(() => {
-    async function loadSupabaseUsers() {
+    async function loadSupabaseData() {
       const remoteUsers = await fetchOperadoresFromSupabase();
       if (remoteUsers && remoteUsers.length > 0) {
         setUsers(remoteUsers);
@@ -113,8 +115,14 @@ export default function App() {
         // Se a tabela no Supabase estiver vazia, popula com os usuários padrão
         await seedInitialOperadoresIfEmpty(INITIAL_USERS);
       }
+
+      // Carrega fiscalizações do Supabase se existirem
+      const remoteFisc = await fetchFiscalizacoesFromSupabase();
+      if (remoteFisc && remoteFisc.length > 0) {
+        setFiscalizacoes(remoteFisc);
+      }
     }
-    loadSupabaseUsers();
+    loadSupabaseData();
   }, []);
 
   // LocalStorage Effects
@@ -214,8 +222,9 @@ export default function App() {
     setMural((prev) => prev.filter((x) => x.id !== recadoId));
   };
 
-  const handleSaveFiscalizacao = (item: FiscalizacaoItem) => {
+  const handleSaveFiscalizacao = async (item: FiscalizacaoItem) => {
     setFiscalizacoes((prev) => [item, ...prev]);
+    await saveFiscalizacaoToSupabase(item);
   };
 
   const handleSaveUser = async (user: UserProfile) => {
