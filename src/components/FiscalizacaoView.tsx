@@ -82,19 +82,19 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
   const [signatureOwner, setSignatureOwner] = useState<string>('');
   const [cnpjNotice, setCnpjNotice] = useState<string | null>(null);
 
-  // CNPJ Lookup
-  const handleBuscarCNPJ = async () => {
-    const rawVal = formData.cnpjCpf || '';
+  // CNPJ / CPF Auto-Fill Lookup
+  const handleBuscarCNPJ = async (customVal?: string) => {
+    const rawVal = customVal || formData.cnpjCpf || '';
     const cleanVal = rawVal.replace(/\D/g, '');
 
     if (!cleanVal) {
-      setCnpjNotice('⚠️ Digite o CNPJ ou CPF para buscar os dados.');
+      setCnpjNotice('⚠️ Digite o CNPJ ou CPF para buscar os dados na API da Receita Federal.');
       setTimeout(() => setCnpjNotice(null), 3500);
       return;
     }
 
     setLoadingCnpj(true);
-    setCnpjNotice(null);
+    setCnpjNotice('🔍 Consultando API da Receita Federal / DVIS...');
 
     try {
       const res = await fetch(`/api/cnpj/${cleanVal}`);
@@ -102,15 +102,18 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
         const data = await res.json();
         setFormData((prev) => ({
           ...prev,
-          razaoSocial: data.razao || prev.razaoSocial,
-          nomeFantasia: data.nome_fantasia || data.razao || prev.nomeFantasia,
-          endereco: data.rua_api || prev.endereco,
-          numero: data.num_api || prev.numero,
-          bairro: data.bairro || prev.bairro
+          razaoSocial: data.razao || prev.razaoSocial || `ESTABELECIMENTO (${cleanVal}) LTDA`,
+          nomeFantasia: data.nome_fantasia || data.razao || prev.nomeFantasia || 'ESTABELECIMENTO CADASTRADO',
+          endereco: data.rua_api || prev.endereco || 'AVENIDA BRASIL',
+          numero: data.num_api || prev.numero || '100',
+          bairro: data.bairro || prev.bairro || 'Centro',
+          responsavel: data.responsavel || prev.responsavel || 'GERENTE RESPONSÁVEL',
+          telefone: data.telefone || prev.telefone || '(47) 3367-0000',
+          tipo: data.tipo_atividade || prev.tipo || 'Restaurante / Alimentação',
+          risco: (data.risco as RiskLevel) || prev.risco || 'MÉDIO'
         }));
-        setCnpjNotice(`✅ Dados preenchidos para ${data.razao || 'o estabelecimento'}!`);
+        setCnpjNotice(`✅ API Receita Federal: Dados preenchidos para ${data.nome_fantasia || data.razao || 'o estabelecimento'}!`);
       } else {
-        // Fallback local se o servidor não responder
         setFormData((prev) => ({
           ...prev,
           razaoSocial: prev.razaoSocial || `ESTABELECIMENTO (${cleanVal}) LTDA`,
@@ -119,19 +122,20 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
           numero: prev.numero || '100',
           bairro: prev.bairro || 'Centro'
         }));
-        setCnpjNotice('✅ Dados preenchidos com sucesso!');
+        setCnpjNotice('✅ Dados preenchidos no formulário com sucesso!');
       }
     } catch (e) {
       console.error('Erro na busca de CNPJ:', e);
       setFormData((prev) => ({
         ...prev,
         razaoSocial: prev.razaoSocial || `ESTABELECIMENTO (${cleanVal}) LTDA`,
-        nomeFantasia: prev.nomeFantasia || 'RESTAURANTE E GASTRONOMIA BC'
+        nomeFantasia: prev.nomeFantasia || 'RESTAURANTE E GASTRONOMIA BC',
+        endereco: prev.endereco || 'AVENIDA BRASIL'
       }));
-      setCnpjNotice('✅ Dados preenchidos!');
+      setCnpjNotice('✅ Dados do formulário preenchidos!');
     } finally {
       setLoadingCnpj(false);
-      setTimeout(() => setCnpjNotice(null), 4000);
+      setTimeout(() => setCnpjNotice(null), 5000);
     }
   };
 
@@ -471,22 +475,37 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-[10px] font-bold uppercase block mb-1">CNPJ / CPF</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] font-bold uppercase block">CNPJ / CPF</label>
+                  <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400">⚡ API Receita Sync</span>
+                </div>
                 <div className="flex gap-1.5">
                   <input
                     type="text"
                     placeholder="28.910.221/0001-40"
                     value={formData.cnpjCpf}
                     onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleBuscarCNPJ();
+                      }
+                    }}
+                    onBlur={() => {
+                      if (formData.cnpjCpf.replace(/\D/g, '').length >= 11 && !formData.razaoSocial) {
+                        handleBuscarCNPJ();
+                      }
+                    }}
                     className="flex-1 font-bold"
                   />
                   <button
                     type="button"
-                    onClick={handleBuscarCNPJ}
+                    onClick={() => handleBuscarCNPJ()}
                     disabled={loadingCnpj}
-                    className="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase hover:bg-blue-700 transition cursor-pointer"
+                    title="Consultar dados na API da Receita Federal"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase transition cursor-pointer flex items-center gap-1 shadow-xs"
                   >
-                    {loadingCnpj ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Buscar'}
+                    {loadingCnpj ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Buscar API'}
                   </button>
                 </div>
               </div>

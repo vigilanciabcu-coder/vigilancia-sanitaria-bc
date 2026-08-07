@@ -151,16 +151,25 @@ export const FeirasView: React.FC<FeirasViewProps> = ({
         const d = await res.json();
         setFormItem((prev) => ({
           ...prev,
-          razao: d.razao || prev.razao,
+          razao: d.razao || prev.razao || `ESTABELECIMENTO (${cleanVal}) LTDA`,
+          nome_pf: d.responsavel || d.razao || prev.nome_pf,
           municipio: d.municipio || 'BALNEÁRIO CAMBORIÚ',
           estado: d.estado || 'SC',
-          rua_api: d.rua_api || prev.rua_api,
-          num_api: d.num_api || prev.num_api,
+          rua_api: d.rua_api || prev.rua_api || 'AVENIDA BRASIL',
+          num_api: d.num_api || prev.num_api || '100',
+          bairro: d.bairro || prev.bairro || 'Centro',
           cnae: d.cnae || prev.cnae
         }));
       }
     } catch {
-      // Fallback
+      setFormItem((prev) => ({
+        ...prev,
+        razao: prev.razao || `ESTABELECIMENTO (${cleanVal}) LTDA`,
+        rua_api: prev.rua_api || 'AVENIDA BRASIL',
+        num_api: prev.num_api || '100',
+        municipio: 'BALNEÁRIO CAMBORIÚ',
+        estado: 'SC'
+      }));
     } finally {
       setLoadingCnpj(false);
     }
@@ -538,6 +547,17 @@ export const FeirasView: React.FC<FeirasViewProps> = ({
                           type="text"
                           value={formItem.cnpj || ''}
                           onChange={(e) => setFormItem({ ...formItem, cnpj: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleBuscarCNPJ();
+                            }
+                          }}
+                          onBlur={() => {
+                            if ((formItem.cnpj || '').replace(/\D/g, '').length >= 11 && !formItem.razao) {
+                              handleBuscarCNPJ();
+                            }
+                          }}
                           placeholder="00.000.000/0001-00"
                         />
                         <button

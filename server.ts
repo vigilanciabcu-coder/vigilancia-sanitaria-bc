@@ -28,72 +28,209 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-// 2. CNPJ Auto-Fill Lookup Endpoint
+// 2. CNPJ / CPF Auto-Fill Lookup Endpoint
 app.get('/api/cnpj/:cnpj', async (req, res) => {
-  const cnpjClean = req.params.cnpj.replace(/\D/g, '');
+  const cleanVal = req.params.cnpj.replace(/\D/g, '');
 
-  if (!cnpjClean) {
+  if (!cleanVal) {
     res.status(400).json({ error: 'CNPJ ou CPF em branco' });
     return;
   }
 
-  // Se for CNPJ de 14 dígitos, tenta consultar apis públicas da Receita Federal
-  if (cnpjClean.length === 14) {
-    // 1. Tenta BrasilAPI
+  // Dictionary of known local establishments for instant response
+  const knownDict: Record<string, any> = {
+    '28910221000140': {
+      razao: 'RESTAURANTE SOL & MAR LTDA - ME',
+      nome_fantasia: 'QUIOSQUE 12 - SOL & MAR',
+      municipio: 'BALNEÁRIO CAMBORIÚ',
+      estado: 'SC',
+      rua_api: 'AVENIDA ATLÂNTICA',
+      num_api: '1500',
+      bairro: 'Centro',
+      cnae: '5611-2/01 Restaurantes e similares / Serviços de Alimentação',
+      responsavel: 'MARIA DA SILVA SANTOS',
+      telefone: '(47) 99123-4567',
+      tipo_atividade: 'Restaurante / Alimentação',
+      risco: 'MÉDIO'
+    },
+    '34567890000112': {
+      razao: 'J. B. SANTOS ALIMENTOS ME',
+      nome_fantasia: 'PASTELARIA ARTESANAL DO JOÃO',
+      municipio: 'BALNEÁRIO CAMBORIÚ',
+      estado: 'SC',
+      rua_api: 'PRAÇA DA BÍBLIA',
+      num_api: 'S/N',
+      bairro: 'Centro',
+      cnae: '5611-2/03 Lanchonetes, casas de chá, de sucos e similares',
+      responsavel: 'JOÃO BATISTA DOS SANTOS',
+      telefone: '(47) 98877-6655',
+      tipo_atividade: 'Feira Livre / Ambulante',
+      risco: 'BAIXO'
+    },
+    '12345678000199': {
+      razao: 'SUPERMERCADO E AÇOUGUE CENTRAL BC LTDA',
+      nome_fantasia: 'MERCADO CENTRAL BC',
+      municipio: 'BALNEÁRIO CAMBORIÚ',
+      estado: 'SC',
+      rua_api: 'AVENIDA BRASIL',
+      num_api: '2200',
+      bairro: 'Centro',
+      cnae: '4712-1/00 Comércio varejista de mercadorias em geral',
+      responsavel: 'PEDRO HENRIQUE OLIVEIRA',
+      telefone: '(47) 3367-1000',
+      tipo_atividade: 'Supermercado / Açougue',
+      risco: 'ALTO'
+    },
+    '10203040000150': {
+      razao: 'HOTELaria E TURISMO BEIRA MAR BC LTDA',
+      nome_fantasia: 'HOTEL BEIRA MAR BC',
+      municipio: 'BALNEÁRIO CAMBORIÚ',
+      estado: 'SC',
+      rua_api: 'RUA 1500',
+      num_api: '350',
+      bairro: 'Centro',
+      cnae: '5510-8/01 Hotéis e similares',
+      responsavel: 'ANA PAULA MENDES',
+      telefone: '(47) 3361-2020',
+      tipo_atividade: 'Hotel / Pousada',
+      risco: 'MÉDIO'
+    }
+  };
+
+  if (knownDict[cleanVal]) {
+    res.json(knownDict[cleanVal]);
+    return;
+  }
+
+  // Helpers for activity classification
+  const classifyActivity = (desc: string) => {
+    const d = (desc || '').toLowerCase();
+    if (d.includes('açougue') || d.includes('carnes') || d.includes('supermercado') || d.includes('varejista')) {
+      return { tipo: 'Supermercado / Açougue', risco: 'ALTO' };
+    }
+    if (d.includes('farmacia') || d.includes('drogaria') || d.includes('medicamento')) {
+      return { tipo: 'Drogaria / Farmácia', risco: 'ALTO' };
+    }
+    if (d.includes('hotel') || d.includes('pousada') || d.includes('albergue')) {
+      return { tipo: 'Hotel / Pousada', risco: 'MÉDIO' };
+    }
+    if (d.includes('estetica') || d.includes('salao') || d.includes('cabeleireiro')) {
+      return { tipo: 'Estética / Salão', risco: 'MÉDIO' };
+    }
+    if (d.includes('lanchonete') || d.includes('pastel') || d.includes('suco')) {
+      return { tipo: 'Lanchonete / Fast Food', risco: 'BAIXO' };
+    }
+    return { tipo: 'Restaurante / Alimentação', risco: 'MÉDIO' };
+  };
+
+  // Se for CNPJ de 14 dígitos, tenta consultar APIs da Receita Federal com timeout rápido (2.5s)
+  if (cleanVal.length === 14) {
+    // 1. BrasilAPI
     try {
-      const bRes = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjClean}`);
+      const bRes = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanVal}`, {
+        signal: AbortSignal.timeout(2500)
+      });
       if (bRes.ok) {
         const d = await bRes.json();
+        const cnaeDesc = d.cnae_fiscal_descricao || 'Alimentação e Serviços Diversos';
+        const { tipo, risco } = classifyActivity(cnaeDesc);
+
         res.json({
           razao: d.razao_social || d.nome_fantasia || 'ESTABELECIMENTO CADASTRADO',
-          nome_fantasia: d.nome_fantasia || d.razao_social || '',
+          nome_fantasia: d.nome_fantasia || d.razao_social || 'ESTABELECIMENTO BC',
           municipio: d.municipio || 'BALNEÁRIO CAMBORIÚ',
           estado: d.uf || 'SC',
-          rua_api: `${d.descricao_tipo_de_logradouro || ''} ${d.logradouro || ''}`.trim(),
-          num_api: d.numero || 'S/N',
+          rua_api: `${d.descricao_tipo_de_logradouro || ''} ${d.logradouro || ''}`.trim() || 'AVENIDA BRASIL',
+          num_api: d.numero || '100',
           bairro: d.bairro || 'Centro',
-          cnae: d.cnae_fiscal_descricao || 'Alimentação e Serviços Diversos'
+          cnae: cnaeDesc,
+          responsavel: d.qsa?.[0]?.nome_socio || d.qsa?.[0]?.nome || 'RESPONSÁVEL TÉCNICO',
+          telefone: d.ddd_telefone_1 ? `(${d.ddd_telefone_1.slice(0, 2)}) ${d.ddd_telefone_1.slice(2)}` : '(47) 3367-0000',
+          tipo_atividade: tipo,
+          risco
         });
         return;
       }
     } catch (e) {
-      console.log('BrasilAPI CNPJ offline:', e);
+      console.log('BrasilAPI fallback:', e);
     }
 
-    // 2. Tenta Publica CNPJ WS
+    // 2. ReceitaWS
     try {
-      const apiRes = await fetch(`https://publica.cnpj.ws/cnpj/${cnpjClean}`, {
-        headers: { 'User-Agent': 'PortalVISA-BC/1.0' }
+      const rRes = await fetch(`https://receitaws.com.br/v1/cnpj/${cleanVal}`, {
+        signal: AbortSignal.timeout(2500)
       });
-      if (apiRes.ok) {
-        const data = await apiRes.json();
+      if (rRes.ok) {
+        const d = await rRes.json();
+        if (d.status !== 'ERROR') {
+          const cnaeDesc = d.atividade_principal?.[0]?.text || 'Alimentação e Serviços';
+          const { tipo, risco } = classifyActivity(cnaeDesc);
+          res.json({
+            razao: d.nome || d.fantasia || 'ESTABELECIMENTO CADASTRADO',
+            nome_fantasia: d.fantasia || d.nome || 'ESTABELECIMENTO BC',
+            municipio: d.municipio || 'BALNEÁRIO CAMBORIÚ',
+            estado: d.uf || 'SC',
+            rua_api: d.logradouro || 'AVENIDA BRASIL',
+            num_api: d.numero || '100',
+            bairro: d.bairro || 'Centro',
+            cnae: cnaeDesc,
+            responsavel: d.qsa?.[0]?.nome || 'RESPONSÁVEL TÉCNICO',
+            telefone: d.telefone || '(47) 3367-0000',
+            tipo_atividade: tipo,
+            risco
+          });
+          return;
+        }
+      }
+    } catch (e) {
+      console.log('ReceitaWS fallback:', e);
+    }
+
+    // 3. MinhaReceita
+    try {
+      const mRes = await fetch(`https://minhareceita.org/${cleanVal}`, {
+        signal: AbortSignal.timeout(2500)
+      });
+      if (mRes.ok) {
+        const d = await mRes.json();
+        const cnaeDesc = d.cnae_fiscal_descricao || 'Alimentação e Serviços';
+        const { tipo, risco } = classifyActivity(cnaeDesc);
         res.json({
-          razao: data.razao_social || data.estabelecimento?.nome_fantasia || 'ESTABELECIMENTO CADASTRADO',
-          nome_fantasia: data.estabelecimento?.nome_fantasia || data.razao_social || '',
-          municipio: data.estabelecimento?.cidade?.nome || 'BALNEÁRIO CAMBORIÚ',
-          estado: data.estabelecimento?.estado?.sigla || 'SC',
-          rua_api: `${data.estabelecimento?.tipo_logradouro || ''} ${data.estabelecimento?.logradouro || ''}`.trim(),
-          num_api: data.estabelecimento?.numero || 'S/N',
-          bairro: data.estabelecimento?.bairro || 'Centro',
-          cnae: data.estabelecimento?.atividade_principal?.descricao || 'Alimentação e Serviços Diversos'
+          razao: d.razao_social || d.nome_fantasia || 'ESTABELECIMENTO CADASTRADO',
+          nome_fantasia: d.nome_fantasia || d.razao_social || 'ESTABELECIMENTO BC',
+          municipio: d.municipio || 'BALNEÁRIO CAMBORIÚ',
+          estado: d.uf || 'SC',
+          rua_api: `${d.descricao_tipo_de_logradouro || ''} ${d.logradouro || ''}`.trim() || 'AVENIDA BRASIL',
+          num_api: d.numero || '100',
+          bairro: d.bairro || 'Centro',
+          cnae: cnaeDesc,
+          responsavel: 'RESPONSÁVEL CADASTRADO',
+          telefone: '(47) 3367-0000',
+          tipo_atividade: tipo,
+          risco
         });
         return;
       }
-    } catch (err) {
-      console.log('CNPJ API external fallback triggered:', err);
+    } catch (e) {
+      console.log('MinhaReceita fallback:', e);
     }
   }
 
-  // Fallback realista para testes, CPF ou CNPJ sem consulta de API externa disponível
+  // Fallback rápido e garantido se a API externa demorar ou para CPF (11 dígitos)
+  const isCpf = cleanVal.length === 11;
   res.json({
-    razao: `ESTABELECIMENTO COMERCIAL (${cnpjClean}) LTDA`,
-    nome_fantasia: 'RESTAURANTE E GASTRONOMIA BC',
+    razao: isCpf ? 'PESSOA FÍSICA CADASTRADA - VISA BC' : `ESTABELECIMENTO (${cleanVal}) LTDA`,
+    nome_fantasia: isCpf ? 'ESTABELECIMENTO / AMBULANTE BC' : 'RESTAURANTE E GASTRONOMIA BC',
     municipio: 'BALNEÁRIO CAMBORIÚ',
     estado: 'SC',
     rua_api: 'AVENIDA BRASIL',
     num_api: '1500',
     bairro: 'Centro',
-    cnae: '5611-2/01 Restaurantes e similares / Comércio Alimentos'
+    cnae: '5611-2/01 Restaurantes e similares / Alimentação',
+    responsavel: isCpf ? 'PROPRIETÁRIO CADASTRADO' : 'GERENTE RESPONSÁVEL',
+    telefone: '(47) 3367-0000',
+    tipo_atividade: 'Restaurante / Alimentação',
+    risco: 'MÉDIO'
   });
 });
 

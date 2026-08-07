@@ -22,7 +22,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const renderIcon = (b: PortalButton) => {
     if (b.img === 'shield') {
-      return <ShieldCheck className="w-5 h-5 text-emerald-400" />;
+      return <ShieldCheck className="w-6 h-6 text-emerald-400" />;
     }
     if (b.img === 'calendar') {
       return (
@@ -34,20 +34,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
     if (b.img === 'tent') {
       return (
-        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-amber-400">
+        <svg viewBox="0 0 24 24" className="w-6 h-6 fill-amber-400">
           <path d="M12 2L2 7v2h20V7L12 2zm-7.5 9v11h3V11h-3zm6 0v11h3V11h-3zm6 0v11h3V11h-3z" />
         </svg>
       );
     }
     if (b.img === 'lab-icon') {
-      return <Microscope className="w-5 h-5 text-cyan-400" />;
+      return <Microscope className="w-6 h-6 text-cyan-400" />;
     }
-    return <img src={b.img} alt={b.nome} className="w-5 h-5 object-contain" />;
+    if (b.id === 'pref' || b.img.includes('brasao')) {
+      return <img src={b.img} alt={b.nome} className="w-8 h-8 max-w-none object-contain scale-125" />;
+    }
+    return <img src={b.img} alt={b.nome} className="w-6 h-6 object-contain" />;
   };
 
   return (
-    <aside className="sidebar h-full flex flex-col py-6 shadow-xl bg-slate-900 border-r border-slate-800">
-      <nav id="sidebar-nav" className="flex-1 w-full space-y-1.5 px-2 text-white">
+    <aside className="sidebar h-full flex flex-col py-4 shadow-xl bg-slate-900 border-r border-slate-800">
+      <nav id="sidebar-nav" className="flex-1 w-full space-y-1 px-1.5 text-white">
         {buttons.map((b) => {
           const isActive = b.view && currentView === b.view;
           return (
@@ -60,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onNavigate(b.view);
                 }
               }}
-              className={`w-full flex items-center py-2 px-3 rounded-xl transition cursor-pointer ${
+              className={`w-full flex items-center py-1.5 px-2 rounded-lg transition cursor-pointer text-xs ${
                 isActive
                   ? 'bg-blue-600 text-white font-bold'
                   : 'hover:bg-slate-800 text-slate-300'
@@ -76,10 +79,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
 
         {isMasterOrDirector && (
-          <div className="mt-4 pt-4 border-t border-slate-800">
+          <div className="mt-3 pt-3 border-t border-slate-800">
             <button
               onClick={() => onNavigate('master')}
-              className={`w-full flex items-center py-2 px-3 rounded-xl transition cursor-pointer ${
+              className={`w-full flex items-center py-1.5 px-2 rounded-lg transition cursor-pointer text-xs ${
                 currentView === 'master'
                   ? 'bg-purple-600 text-white font-bold'
                   : 'hover:bg-slate-800 text-purple-300'
@@ -87,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               title="Painel Master / Diretor"
             >
               <div className="w-8 flex justify-center flex-shrink-0">
-                <Crown className="w-5 h-5 text-amber-400" />
+                <Crown className="w-6 h-6 text-amber-400" />
               </div>
               <span className="sidebar-text font-black">PAINEL MASTER</span>
             </button>

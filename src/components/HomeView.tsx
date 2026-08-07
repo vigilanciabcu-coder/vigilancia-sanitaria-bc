@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PortalButton, EscalaItem, UserProfile, RecadoMural, ChatMessage } from '../types';
-import { ShieldCheck, Calendar, Send, Info, Crown } from 'lucide-react';
+import { ShieldCheck, Calendar, Send, Info, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface HomeViewProps {
   buttons: PortalButton[];
@@ -26,6 +26,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onSendMessage,
 }) => {
   const [chatInput, setChatInput] = useState('');
+  const [muralIndex, setMuralIndex] = useState(0);
+
+  // Auto-rotate mural every 5 seconds if there are 3 or more items
+  useEffect(() => {
+    if (mural.length <= 2) return;
+    const interval = setInterval(() => {
+      setMuralIndex((prev) => (prev + 1) % mural.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [mural.length]);
+
+  const visibleMural =
+    mural.length <= 2
+      ? mural
+      : [
+          mural[muralIndex % mural.length],
+          mural[(muralIndex + 1) % mural.length],
+        ].filter(Boolean);
+
   const todayISO = new Date().toISOString().split('T')[0];
   const todayDay = new Date().getDate();
   const todayMonth = new Date().getMonth();
@@ -47,20 +66,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
     const birthDay = parseInt(parts[2], 10);
     return birthMonth === todayMonth && birthDay === todayDay;
   });
-
-  const aniversariantesMes = users
-    .filter((u) => {
-      if (!u.data_nascimento) return false;
-      const parts = u.data_nascimento.split('-');
-      if (parts.length < 3) return false;
-      const birthMonth = parseInt(parts[1], 10) - 1;
-      return birthMonth === todayMonth;
-    })
-    .sort((a, b) => {
-      const dayA = parseInt(a.data_nascimento!.split('-')[2], 10);
-      const dayB = parseInt(b.data_nascimento!.split('-')[2], 10);
-      return dayA - dayB;
-    });
 
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +102,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
     }
     if (b.img === 'lab-icon') {
       return <span className="text-4xl">🔬</span>;
+    }
+    if (b.id === 'pref' || b.img.includes('brasao')) {
+      return <img src={b.img} alt={b.nome} className="h-16 max-h-16 w-auto object-contain scale-125 transition-transform" />;
     }
     return <img src={b.img} alt={b.nome} className="h-12 w-auto object-contain" />;
   };
@@ -192,7 +200,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <section className="bg-gradient-to-br from-indigo-700 via-purple-800 to-pink-800 p-4 rounded-2xl text-white shadow-md text-left relative overflow-hidden">
           <div className="flex items-center justify-between border-b border-indigo-400/40 pb-1.5 mb-2">
             <h2 className="text-[10px] font-black uppercase tracking-wider text-indigo-100 flex items-center gap-1">
-              <span>🎂 Aniversariantes (Dia / Mês)</span>
+              <span>🎂 Aniversariantes do Dia</span>
             </h2>
             <span className="text-[8px] bg-pink-500/80 font-black px-2 py-0.5 rounded-full uppercase shadow">
               Automático
@@ -223,44 +231,44 @@ export const HomeView: React.FC<HomeViewProps> = ({
               Nenhum aniversariante hoje.
             </p>
           )}
-
-          {aniversariantesMes.length > 0 && (
-            <div className="mt-2.5 pt-2 border-t border-indigo-400/30 text-[10px]">
-              <span className="text-indigo-200 font-extrabold uppercase block mb-1.5 text-[9px] tracking-wider">
-                Próximos do Mês:
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {aniversariantesMes.map((u) => {
-                  const diaMes = u.data_nascimento?.split('-').reverse().slice(0, 2).join('/');
-                  const isToday = aniversariantesHoje.some((h) => h.id === u.id);
-                  return (
-                    <span
-                      key={u.id}
-                      className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
-                        isToday
-                          ? 'bg-amber-400 text-slate-950 shadow'
-                          : 'bg-indigo-950/60 text-indigo-100 border border-indigo-400/30'
-                      }`}
-                    >
-                      {u.nome_completo.split(' ')[0]} ({diaMes})
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </section>
 
         {/* Mural de Recados */}
         <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm text-left">
-          <h2 className="text-[11px] font-black uppercase text-blue-600 dark:text-blue-400 border-b pb-2 mb-3 tracking-widest flex items-center gap-1.5">
-            <Info className="w-4 h-4" /> Mural Informativo
-          </h2>
-          <div id="lista-recados-home" className="space-y-3">
-            {mural.map((m) => (
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
+            <h2 className="text-[11px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-widest flex items-center gap-1.5">
+              <Info className="w-4 h-4" /> Mural Informativo
+            </h2>
+            {mural.length > 2 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setMuralIndex((prev) => (prev - 1 + mural.length) % mural.length)}
+                  className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition cursor-pointer"
+                  title="Anterior"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-[9px] font-bold text-slate-400">
+                  {muralIndex + 1}/{mural.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMuralIndex((prev) => (prev + 1) % mural.length)}
+                  className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition cursor-pointer"
+                  title="Próximo"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div id="lista-recados-home" className="space-y-2.5 transition-all duration-300">
+            {visibleMural.map((m) => (
               <div
                 key={m.id}
-                className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+                className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 transition-all duration-500"
               >
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-[9px] font-black text-slate-800 dark:text-white uppercase">
@@ -285,6 +293,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
               </div>
             ))}
+            {mural.length === 0 && (
+              <p className="text-xs text-slate-400 py-2">Nenhum aviso no mural.</p>
+            )}
           </div>
         </section>
 

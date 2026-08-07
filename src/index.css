@@ -11,7 +11,7 @@
     z-index: 50; 
 }
 .sidebar::-webkit-scrollbar { display: none; }
-.sidebar:hover { width: 240px; }
+.sidebar:hover { width: 170px; }
 
 .sidebar-text { 
     opacity: 0; 
