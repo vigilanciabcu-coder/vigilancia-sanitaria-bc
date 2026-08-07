@@ -80,48 +80,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, users, onLoginSu
             Acessar Sistema
           </button>
         </form>
-
-        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-400">
-          <p className="font-bold mb-2 uppercase text-slate-600 dark:text-slate-300">
-            Clique em uma conta para entrar diretamente:
-          </p>
-          <div className="grid grid-cols-1 gap-2">
-            {users.map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() => onLoginSuccess(u)}
-                className={`p-2.5 rounded-xl text-left border flex items-center justify-between transition cursor-pointer ${
-                  u.cargo === 'MASTER'
-                    ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 hover:bg-amber-100 text-amber-900 dark:text-amber-200'
-                    : u.cargo === 'DIRETOR'
-                    ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-300 dark:border-purple-700 hover:bg-purple-100 text-purple-900 dark:text-purple-200'
-                    : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 hover:bg-blue-50 text-slate-800 dark:text-slate-200'
-                }`}
-              >
-                <div>
-                  <p className="font-black uppercase text-xs flex items-center gap-1.5">
-                    {u.nome_completo}
-                  </p>
-                  <p className="text-[9px] font-mono text-slate-500 dark:text-slate-400">
-                    {u.email}
-                  </p>
-                </div>
-                <span
-                  className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${
-                    u.cargo === 'MASTER'
-                      ? 'bg-amber-400 text-slate-950'
-                      : u.cargo === 'DIRETOR'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-blue-600 text-white'
-                  }`}
-                >
-                  {u.cargo}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     </section>
   );
