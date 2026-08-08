@@ -72,14 +72,13 @@ export async function saveOperadorToSupabase(user: UserProfile): Promise<boolean
       senha: user.senha || '123456'
     };
 
-    const { error } = await supabase.from('operadores').upsert(payload, { onConflict: 'id' });
+    const { error } = await supabase.from('operadores').upsert(payload, { onConflict: 'email' });
 
     if (error) {
-      console.warn('Upsert com ID falhou no Supabase:', error.message, 'Tentando salvar sem ID...');
-      const { id, ...payloadWithoutId } = payload;
-      const { error: insertErr } = await supabase.from('operadores').insert([payloadWithoutId]);
-      if (insertErr) {
-        console.error('Erro ao salvar operador no Supabase:', insertErr.message);
+      console.warn('Upsert por email falhou no Supabase:', error.message, 'Tentando por id...');
+      const { error: idErr } = await supabase.from('operadores').upsert(payload, { onConflict: 'id' });
+      if (idErr) {
+        console.error('Erro ao salvar operador no Supabase:', idErr.message);
         return false;
       }
     }
