@@ -101,12 +101,13 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
       if (res.ok) {
         const data = await res.json();
 
-        // Normalização do Bairro para corresponder à lista BAIRROS_BC
+        // Normalização do Bairro sem acentos para corresponder à lista BAIRROS_BC
+        const normStr = (str: string) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const rawBairro = data.bairro || '';
         const matchedBairro = BAIRROS_BC.find(
-          (b) => b.toLowerCase() === rawBairro.toLowerCase()
+          (b) => normStr(b) === normStr(rawBairro)
         ) || BAIRROS_BC.find(
-          (b) => rawBairro.toLowerCase().includes(b.toLowerCase()) || b.toLowerCase().includes(rawBairro.toLowerCase())
+          (b) => normStr(rawBairro).includes(normStr(b)) || normStr(b).includes(normStr(rawBairro))
         ) || 'Centro';
 
         // Normalização do Tipo de Atividade

@@ -94,6 +94,20 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       telefone: '(47) 3361-2020',
       tipo_atividade: 'Hotel / Pousada',
       risco: 'MÉDIO'
+    },
+    '63691709000109': {
+      razao: 'NOSSA PADARIA LTDA',
+      nome_fantasia: 'NOSSA PADARIA',
+      municipio: 'BALNEÁRIO CAMBORIÚ',
+      estado: 'SC',
+      rua_api: 'AVENIDA PALESTINA',
+      num_api: '870',
+      bairro: 'Nações',
+      cnae: '1091-1/02 Fabricação de produtos de padaria e confeitaria',
+      responsavel: 'SAMUEL SILVEIRA RAMOS',
+      telefone: '(47) 3360-0741',
+      tipo_atividade: 'Lanchonete / Fast Food',
+      risco: 'BAIXO'
     }
   };
 
@@ -117,7 +131,7 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
     if (d.includes('estetica') || d.includes('salao') || d.includes('cabeleireiro')) {
       return { tipo: 'Estética / Salão', risco: 'MÉDIO' };
     }
-    if (d.includes('lanchonete') || d.includes('pastel') || d.includes('suco')) {
+    if (d.includes('lanchonete') || d.includes('pastel') || d.includes('suco') || d.includes('padaria') || d.includes('confeitaria') || d.includes('panificadora')) {
       return { tipo: 'Lanchonete / Fast Food', risco: 'BAIXO' };
     }
     return { tipo: 'Restaurante / Alimentação', risco: 'MÉDIO' };
@@ -125,9 +139,46 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
 
   // Se for CNPJ de 14 dígitos, tenta consultar APIs da Receita Federal com timeout rápido (2.5s)
   if (cleanVal.length === 14) {
-    // 1. BrasilAPI
+    const reqHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json'
+    };
+
+    // 1. MinhaReceita (Rápida e sem bloqueio/rate-limit)
+    try {
+      const mRes = await fetch(`https://minhareceita.org/${cleanVal}`, {
+        headers: reqHeaders,
+        signal: AbortSignal.timeout(2500)
+      });
+      if (mRes.ok) {
+        const d = await mRes.json();
+        const cnaeDesc = d.cnae_fiscal_descricao || 'Alimentação e Serviços';
+        const { tipo, risco } = classifyActivity(cnaeDesc);
+        const rua = `${d.descricao_tipo_de_logradouro || ''} ${d.logradouro || ''}`.trim() || 'AVENIDA BRASIL';
+        res.json({
+          razao: d.razao_social || d.nome_fantasia || 'ESTABELECIMENTO CADASTRADO',
+          nome_fantasia: d.nome_fantasia || d.razao_social || 'ESTABELECIMENTO BC',
+          municipio: d.municipio || 'BALNEÁRIO CAMBORIÚ',
+          estado: d.uf || 'SC',
+          rua_api: rua,
+          num_api: d.numero || '100',
+          bairro: d.bairro || 'Centro',
+          cnae: cnaeDesc,
+          responsavel: d.qsa?.[0]?.nome_socio || 'RESPONSÁVEL CADASTRADO',
+          telefone: d.ddd_telefone_1 ? `(${d.ddd_telefone_1.slice(0, 2)}) ${d.ddd_telefone_1.slice(2)}` : '(47) 3367-0000',
+          tipo_atividade: tipo,
+          risco
+        });
+        return;
+      }
+    } catch (e) {
+      console.log('MinhaReceita fallback:', e);
+    }
+
+    // 2. BrasilAPI
     try {
       const bRes = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanVal}`, {
+        headers: reqHeaders,
         signal: AbortSignal.timeout(2500)
       });
       if (bRes.ok) {
@@ -155,9 +206,10 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       console.log('BrasilAPI fallback:', e);
     }
 
-    // 2. ReceitaWS
+    // 3. ReceitaWS
     try {
       const rRes = await fetch(`https://receitaws.com.br/v1/cnpj/${cleanVal}`, {
+        headers: reqHeaders,
         signal: AbortSignal.timeout(2500)
       });
       if (rRes.ok) {
@@ -184,35 +236,6 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       }
     } catch (e) {
       console.log('ReceitaWS fallback:', e);
-    }
-
-    // 3. MinhaReceita
-    try {
-      const mRes = await fetch(`https://minhareceita.org/${cleanVal}`, {
-        signal: AbortSignal.timeout(2500)
-      });
-      if (mRes.ok) {
-        const d = await mRes.json();
-        const cnaeDesc = d.cnae_fiscal_descricao || 'Alimentação e Serviços';
-        const { tipo, risco } = classifyActivity(cnaeDesc);
-        res.json({
-          razao: d.razao_social || d.nome_fantasia || 'ESTABELECIMENTO CADASTRADO',
-          nome_fantasia: d.nome_fantasia || d.razao_social || 'ESTABELECIMENTO BC',
-          municipio: d.municipio || 'BALNEÁRIO CAMBORIÚ',
-          estado: d.uf || 'SC',
-          rua_api: `${d.descricao_tipo_de_logradouro || ''} ${d.logradouro || ''}`.trim() || 'AVENIDA BRASIL',
-          num_api: d.numero || '100',
-          bairro: d.bairro || 'Centro',
-          cnae: cnaeDesc,
-          responsavel: 'RESPONSÁVEL CADASTRADO',
-          telefone: '(47) 3367-0000',
-          tipo_atividade: tipo,
-          risco
-        });
-        return;
-      }
-    } catch (e) {
-      console.log('MinhaReceita fallback:', e);
     }
   }
 
