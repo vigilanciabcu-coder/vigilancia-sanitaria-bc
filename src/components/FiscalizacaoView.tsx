@@ -100,27 +100,51 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
       const res = await fetch(`/api/cnpj/${cleanVal}`);
       if (res.ok) {
         const data = await res.json();
+
+        // Normalização do Bairro para corresponder à lista BAIRROS_BC
+        const rawBairro = data.bairro || '';
+        const matchedBairro = BAIRROS_BC.find(
+          (b) => b.toLowerCase() === rawBairro.toLowerCase()
+        ) || BAIRROS_BC.find(
+          (b) => rawBairro.toLowerCase().includes(b.toLowerCase()) || b.toLowerCase().includes(rawBairro.toLowerCase())
+        ) || 'Centro';
+
+        // Normalização do Tipo de Atividade
+        let matchedTipo = 'Restaurante / Alimentação';
+        if (data.tipo_atividade) {
+          const t = data.tipo_atividade.toLowerCase();
+          if (t.includes('feira') || t.includes('ambulante')) matchedTipo = 'Feira Livre / Ambulante';
+          else if (t.includes('supermercado') || t.includes('açougue') || t.includes('acougue')) matchedTipo = 'Supermercado / Açougue';
+          else if (t.includes('lanchonete') || t.includes('fast food')) matchedTipo = 'Lanchonete / Fast Food';
+          else if (t.includes('drogaria') || t.includes('farmácia') || t.includes('farmacia')) matchedTipo = 'Drogaria / Farmácia';
+          else if (t.includes('hotel') || t.includes('pousada')) matchedTipo = 'Hotel / Pousada';
+          else if (t.includes('estética') || t.includes('estetica') || t.includes('salão') || t.includes('salao')) matchedTipo = 'Estética / Salão';
+        }
+
         setFormData((prev) => ({
           ...prev,
-          razaoSocial: data.razao || prev.razaoSocial || `ESTABELECIMENTO (${cleanVal}) LTDA`,
-          nomeFantasia: data.nome_fantasia || data.razao || prev.nomeFantasia || 'ESTABELECIMENTO CADASTRADO',
-          endereco: data.rua_api || prev.endereco || 'AVENIDA BRASIL',
-          numero: data.num_api || prev.numero || '100',
-          bairro: data.bairro || prev.bairro || 'Centro',
-          responsavel: data.responsavel || prev.responsavel || 'GERENTE RESPONSÁVEL',
-          telefone: data.telefone || prev.telefone || '(47) 3367-0000',
-          tipo: data.tipo_atividade || prev.tipo || 'Restaurante / Alimentação',
-          risco: (data.risco as RiskLevel) || prev.risco || 'MÉDIO'
+          cnpjCpf: rawVal.length > 11 && !rawVal.includes('/') 
+            ? cleanVal.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+            : rawVal,
+          razaoSocial: data.razao || `ESTABELECIMENTO (${cleanVal}) LTDA`,
+          nomeFantasia: data.nome_fantasia || data.razao || 'ESTABELECIMENTO CADASTRADO',
+          endereco: data.rua_api || 'AVENIDA BRASIL',
+          numero: data.num_api || '100',
+          bairro: matchedBairro,
+          responsavel: data.responsavel || 'GERENTE RESPONSÁVEL',
+          telefone: data.telefone || '(47) 3367-0000',
+          tipo: matchedTipo,
+          risco: (data.risco as RiskLevel) || 'MÉDIO'
         }));
-        setCnpjNotice(`✅ API Receita Federal: Dados preenchidos para ${data.nome_fantasia || data.razao || 'o estabelecimento'}!`);
+        setCnpjNotice(`✅ API Receita Federal: Dados preenchidos com sucesso para ${data.nome_fantasia || data.razao || 'o estabelecimento'}!`);
       } else {
         setFormData((prev) => ({
           ...prev,
-          razaoSocial: prev.razaoSocial || `ESTABELECIMENTO (${cleanVal}) LTDA`,
-          nomeFantasia: prev.nomeFantasia || 'RESTAURANTE E GASTRONOMIA BC',
-          endereco: prev.endereco || 'AVENIDA BRASIL',
-          numero: prev.numero || '100',
-          bairro: prev.bairro || 'Centro'
+          razaoSocial: `ESTABELECIMENTO (${cleanVal}) LTDA`,
+          nomeFantasia: 'RESTAURANTE E GASTRONOMIA BC',
+          endereco: 'AVENIDA BRASIL',
+          numero: '100',
+          bairro: 'Centro'
         }));
         setCnpjNotice('✅ Dados preenchidos no formulário com sucesso!');
       }
@@ -128,9 +152,9 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
       console.error('Erro na busca de CNPJ:', e);
       setFormData((prev) => ({
         ...prev,
-        razaoSocial: prev.razaoSocial || `ESTABELECIMENTO (${cleanVal}) LTDA`,
-        nomeFantasia: prev.nomeFantasia || 'RESTAURANTE E GASTRONOMIA BC',
-        endereco: prev.endereco || 'AVENIDA BRASIL'
+        razaoSocial: `ESTABELECIMENTO (${cleanVal}) LTDA`,
+        nomeFantasia: 'RESTAURANTE E GASTRONOMIA BC',
+        endereco: 'AVENIDA BRASIL'
       }));
       setCnpjNotice('✅ Dados do formulário preenchidos!');
     } finally {
@@ -484,7 +508,14 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
                     type="text"
                     placeholder="28.910.221/0001-40"
                     value={formData.cnpjCpf}
-                    onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData((prev) => ({ ...prev, cnpjCpf: val }));
+                      const clean = val.replace(/\D/g, '');
+                      if (clean.length === 14 || clean.length === 11) {
+                        handleBuscarCNPJ(val);
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -492,7 +523,7 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
                       }
                     }}
                     onBlur={() => {
-                      if (formData.cnpjCpf.replace(/\D/g, '').length >= 11 && !formData.razaoSocial) {
+                      if (formData.cnpjCpf.replace(/\D/g, '').length >= 11) {
                         handleBuscarCNPJ();
                       }
                     }}
@@ -506,6 +537,30 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
                     className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase transition cursor-pointer flex items-center gap-1 shadow-xs"
                   >
                     {loadingCnpj ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Buscar API'}
+                  </button>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <span className="text-[9px] text-slate-400 font-bold self-center">Atalhos:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleBuscarCNPJ('28.910.221/0001-40')}
+                    className="text-[9px] bg-slate-100 hover:bg-blue-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 px-1.5 py-0.5 rounded cursor-pointer transition font-medium"
+                  >
+                    Sol & Mar (Quiosque)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleBuscarCNPJ('12.345.678/0001-99')}
+                    className="text-[9px] bg-slate-100 hover:bg-blue-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 px-1.5 py-0.5 rounded cursor-pointer transition font-medium"
+                  >
+                    Mercado Central
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleBuscarCNPJ('10.203.040/0001-50')}
+                    className="text-[9px] bg-slate-100 hover:bg-blue-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 px-1.5 py-0.5 rounded cursor-pointer transition font-medium"
+                  >
+                    Hotel Beira Mar
                   </button>
                 </div>
               </div>
