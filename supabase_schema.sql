@@ -4,7 +4,7 @@
 -- ====================================================================
 
 -- 1. Tabela de Operadores e Fiscais
-CREATE TABLE IF NOT EXISTS public.perfis (
+CREATE TABLE IF NOT EXISTS public.operadores (
     id TEXT PRIMARY KEY,
     nome_completo TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS public.fiscalizacoes (
 );
 
 -- 5. Inserir Usuários Iniciais de Exemplo
-INSERT INTO public.perfis (id, nome_completo, email, cargo, matricula)
+INSERT INTO public.operadores (id, nome_completo, email, cargo, matricula)
 VALUES 
     ('u-1', 'CARLOS EDUARDO SILVA', 'fiscal@bc.sc.gov.br', 'FISCAL', 'FIS-4092'),
     ('u-2', 'ANA PAULA OLIVEIRA', 'agente@bc.sc.gov.br', 'AGENTE', 'AGE-1102'),
@@ -80,14 +80,14 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 6. Habilitar Permissões (Row Level Security - RLS)
-ALTER TABLE public.perfis ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.operadores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.escala ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.feiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fiscalizacoes ENABLE ROW LEVEL SECURITY;
 
 -- Liberar leitura e escrita para chaves anon/autenticadas da aplicação
-DROP POLICY IF EXISTS "Permitir Acesso Anonimo Perfis" ON public.perfis;
-CREATE POLICY "Permitir Acesso Anonimo Perfis" ON public.perfis FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir Acesso Anonimo Operadores" ON public.operadores;
+CREATE POLICY "Permitir Acesso Anonimo Operadores" ON public.operadores FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Permitir Acesso Anonimo Escala" ON public.escala;
 CREATE POLICY "Permitir Acesso Anonimo Escala" ON public.escala FOR ALL USING (true) WITH CHECK (true);
