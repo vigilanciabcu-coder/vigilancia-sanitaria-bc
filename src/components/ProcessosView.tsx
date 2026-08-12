@@ -619,19 +619,19 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
 
             {/* ROW 2: CNPJ / CPF | RAZÃO SOCIAL | NOME FANTASIA */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-              <div className="md:col-span-3">
-                <label className="text-[10px] font-black text-slate-700 uppercase block mb-0.5">CNPJ / CPF</label>
+              <div className="md:col-span-2">
+                <label style={{ width: '75%' }} className="text-[10px] font-black text-slate-700 uppercase block mb-0.5 text-center">CNPJ / CPF</label>
                 <input
                   type="text"
                   value={formData.cnpjCpf}
                   onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })}
                   onBlur={(e) => handleSearchByCnpj(e.target.value)}
-                  style={{ width: 'calc(100% - 40px)' }}
-                  className="w-full bg-white border border-slate-300 text-slate-900 text-xs py-1 px-2 rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono font-bold"
+                  style={{ width: '75%' }}
+                  className="w-3/4 bg-white border border-slate-300 text-slate-900 text-xs py-1 px-2 rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono font-bold block"
                 />
               </div>
 
-              <div className="md:col-span-5">
+              <div className="md:col-span-6">
                 <label className="text-[10px] font-black text-slate-700 uppercase block mb-0.5">RAZÃO SOCIAL</label>
                 <input
                   type="text"
@@ -655,18 +655,18 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
             {/* ROW 3: CEP | ENDEREÇO (RUA) | Nº / COMPLEMENTO | BAIRRO */}
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
               <div className="sm:col-span-2">
-                <label className="text-[10px] font-black text-slate-700 uppercase block mb-0.5">CEP</label>
+                <label style={{ width: '50%' }} className="text-[10px] font-black text-slate-700 uppercase block mb-0.5 text-center">CEP</label>
                 <input
                   type="text"
                   placeholder="88330-000"
                   value={formData.cep}
                   onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                  style={{ width: 'calc(100% - 40px)' }}
-                  className="w-full bg-white border border-slate-300 text-slate-900 text-xs py-1 px-2 rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                  style={{ width: '50%' }}
+                  className="w-1/2 bg-white border border-slate-300 text-slate-900 text-xs py-1 px-2 rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono block"
                 />
               </div>
 
-              <div className="sm:col-span-5">
+              <div className="sm:col-span-4">
                 <label className="text-[10px] font-black text-slate-700 uppercase block mb-0.5">ENDEREÇO (RUA)</label>
                 <input
                   type="text"
@@ -677,7 +677,7 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
                 />
               </div>
 
-              <div className="sm:col-span-4">
+              <div className="sm:col-span-3">
                 <label className="text-[10px] font-black text-slate-700 uppercase block mb-0.5">Nº / COMPLEMENTO</label>
                 <input
                   type="text"
@@ -688,7 +688,7 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
                 />
               </div>
 
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-3">
                 <label className="text-[10px] font-black text-slate-700 uppercase block mb-0.5">BAIRRO</label>
                 <select
                   value={formData.bairro}
