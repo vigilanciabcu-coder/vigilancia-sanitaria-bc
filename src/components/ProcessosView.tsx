@@ -3,6 +3,11 @@ import { ProcessoItem, ProcessoStatus, UserProfile } from '../types';
 import { BAIRROS_BC } from '../data/mockData';
 import { fetchCnpj } from '../lib/cnpjService';
 import {
+  fetchProcessosFromSheets,
+  saveProcessoToSheets,
+  PROCESSOS_SHEETS_WEBHOOK_URL
+} from '../lib/googleSheetsService';
+import {
   Search,
   RotateCcw,
   Save,
@@ -22,7 +27,8 @@ import {
   FileCheck,
   ExternalLink,
   Edit2,
-  Trash2
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 
 interface ProcessosViewProps {
@@ -48,6 +54,8 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
   const [searchCnpjInput, setSearchCnpjInput] = useState('');
   const [searchNotice, setSearchNotice] = useState<string | null>(null);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [savingSheets, setSavingSheets] = useState(false);
+  const [syncingSheets, setSyncingSheets] = useState(false);
 
   // Filter state for Historico tab
   const [historicoSearch, setHistoricoSearch] = useState('');
@@ -330,8 +338,30 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
     }));
   };
 
-  const handleSaveForm = (e: React.FormEvent) => {
+  const handleSyncFromSheets = async () => {
+    setSyncingSheets(true);
+    setSearchNotice('🔄 Sincronizando com a Planilha do Google Sheets (Apps Script)...');
+    try {
+      const remote = await fetchProcessosFromSheets();
+      if (remote && remote.length > 0) {
+        remote.forEach(p => onSaveProcesso(p));
+        setSearchNotice(`✅ ${remote.length} processos sincronizados com sucesso da Planilha Google!`);
+      } else {
+        setSearchNotice('✅ Conexão com Google Sheets ativa! Planilha sem novos registros externos.');
+      }
+    } catch (err) {
+      setSearchNotice('⚠️ Erro ao comunicar com a Planilha Google Sheets.');
+    } finally {
+      setSyncingSheets(false);
+      setTimeout(() => setSearchNotice(null), 5000);
+    }
+  };
+
+  const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSavingSheets(true);
+    setSearchNotice('💾 Salvando no sistema e enviando para o Google Sheets...');
+
     const fiscalNames = servidoresDesignados.length > 0 
       ? servidoresDesignados.map(s => s.nome).join(', ') 
       : (formData.fiscalResponsavel !== 'Selecione...' ? formData.fiscalResponsavel : 'Carlos Eduardo Silva');
@@ -355,8 +385,13 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
     };
 
     onSaveProcesso(itemToSave);
-    setSearchNotice('✅ Registro do Processo salvo com sucesso!');
-    setTimeout(() => setSearchNotice(null), 4000);
+
+    // Envia diretamente para o Google Apps Script (Sheets)
+    await saveProcessoToSheets(itemToSave, formData);
+
+    setSavingSheets(false);
+    setSearchNotice(`✅ Processo ${itemToSave.num_processo} salvo no sistema e gravado na Planilha Google Sheets!`);
+    setTimeout(() => setSearchNotice(null), 5000);
   };
 
   // Filtered Historico List
@@ -422,8 +457,19 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
           </div>
         </div>
 
-        {/* Right Side: Navigation Buttons from Screenshot */}
+        {/* Right Side: Navigation Buttons & Google Sheets Sync */}
         <div className="flex items-center gap-1.5 flex-wrap w-full lg:w-auto justify-end">
+          <button
+            type="button"
+            onClick={handleSyncFromSheets}
+            disabled={syncingSheets}
+            className="bg-emerald-700 hover:bg-emerald-600 text-emerald-100 border border-emerald-500 text-xs font-black px-2.5 py-1.5 rounded tracking-wide uppercase transition cursor-pointer shadow flex items-center gap-1"
+            title="Sincronizar processos diretamente da Planilha Google Sheets"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncingSheets ? 'animate-spin' : ''}`} />
+            {syncingSheets ? 'SINCRONIZANDO...' : 'SHEETS'}
+          </button>
+
           <button
             onClick={() => setCurrentTab('cadastro')}
             className={`text-xs font-black px-3.5 py-1.5 rounded tracking-wide uppercase transition cursor-pointer shadow ${
@@ -580,6 +626,7 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
                   value={formData.cnpjCpf}
                   onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })}
                   onBlur={(e) => handleSearchByCnpj(e.target.value)}
+                  style={{ width: 'calc(100% - 40px)' }}
                   className="w-full bg-white border border-slate-300 text-slate-900 text-xs py-1 px-2 rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono font-bold"
                 />
               </div>
@@ -614,6 +661,7 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
                   placeholder="88330-000"
                   value={formData.cep}
                   onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                  style={{ width: 'calc(100% - 40px)' }}
                   className="w-full bg-white border border-slate-300 text-slate-900 text-xs py-1 px-2 rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono"
                 />
               </div>
@@ -629,7 +677,7 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
                 />
               </div>
 
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-4">
                 <label className="text-[10px] font-black text-slate-700 uppercase block mb-0.5">Nº / COMPLEMENTO</label>
                 <input
                   type="text"
@@ -640,7 +688,7 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
                 />
               </div>
 
-              <div className="sm:col-span-3">
+              <div className="sm:col-span-2">
                 <label className="text-[10px] font-black text-slate-700 uppercase block mb-0.5">BAIRRO</label>
                 <select
                   value={formData.bairro}
@@ -933,9 +981,11 @@ export const ProcessosView: React.FC<ProcessosViewProps> = ({
 
               <button
                 type="submit"
-                className="bg-[#28783B] hover:bg-[#1e5a2c] text-white font-extrabold text-sm px-12 py-3 rounded shadow-lg transition uppercase tracking-wider cursor-pointer flex items-center gap-2 active:scale-98"
+                disabled={savingSheets}
+                className="bg-[#28783B] hover:bg-[#1e5a2c] disabled:opacity-75 text-white font-extrabold text-sm px-8 md:px-12 py-3 rounded shadow-lg transition uppercase tracking-wider cursor-pointer flex items-center gap-2 active:scale-98"
               >
-                <Save className="w-5 h-5" /> SALVAR REGISTRO
+                <Save className={`w-5 h-5 ${savingSheets ? 'animate-bounce' : ''}`} />
+                {savingSheets ? 'ENVIANDO PARA PLANILHA...' : 'SALVAR REGISTRO'}
               </button>
             </div>
           </form>

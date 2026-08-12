@@ -40,6 +40,11 @@ import {
   saveFiscalizacaoToSupabase
 } from './lib/supabaseService';
 
+import {
+  fetchProcessosFromSheets,
+  saveProcessoToSheets
+} from './lib/googleSheetsService';
+
 const PORTAL_BUTTONS: PortalButton[] = [
   { id: 'pref', nome: 'Prefeitura', url: 'https://www.bc.sc.gov.br/', img: 'https://wcbzmpnvcjamlgljsksk.supabase.co/storage/v1/object/public/public-assets/brasao__1_-removebg-preview%20(1).avif', acao: 'link' },
   { id: 'proc', nome: 'Processos', url: 'https://script.google.com/macros/s/AKfycbyaTV2FDyJ2-tC5l7OXiEvD5DVw2QxH_CHO_rHKmdnYxu8bqDQapmP5K9h6C5TEaWWXTQ/exec', img: 'https://wcbzmpnvcjamlgljsksk.supabase.co/storage/v1/object/public/public-assets/processos.avif', acao: 'link' },
@@ -129,6 +134,13 @@ export default function App() {
       const remoteFisc = await fetchFiscalizacoesFromSupabase();
       if (remoteFisc && remoteFisc.length > 0) {
         setFiscalizacoes(remoteFisc);
+      }
+
+      // Carrega processos do Google Sheets se existirem
+      const remoteProc = await fetchProcessosFromSheets();
+      if (remoteProc && remoteProc.length > 0) {
+        setProcessos(remoteProc);
+        localStorage.setItem('visa_processos', JSON.stringify(remoteProc));
       }
     }
     loadSupabaseData();
@@ -260,7 +272,7 @@ export default function App() {
     deleteOperadorFromSupabase(userId);
   };
 
-  const handleSaveProcesso = (item: ProcessoItem) => {
+  const handleSaveProcesso = async (item: ProcessoItem) => {
     setProcessos((prev) => {
       const idx = prev.findIndex((p) => p.id === item.id);
       let updated: ProcessoItem[];
@@ -273,6 +285,9 @@ export default function App() {
       localStorage.setItem('visa_processos', JSON.stringify(updated));
       return updated;
     });
+
+    // Envia automaticamente para a Planilha do Google Sheets (Apps Script)
+    await saveProcessoToSheets(item);
   };
 
   const handleDeleteProcesso = (id: string) => {
