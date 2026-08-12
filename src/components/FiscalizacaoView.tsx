@@ -618,22 +618,26 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
               </div>
 
               <div className="md:col-span-2">
-                <label className="text-[10px] font-bold uppercase block mb-1">Logradouro / Endereço</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Rua / Avenida"
-                    value={formData.endereco}
-                    onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                    className="flex-1"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Nº"
-                    value={formData.numero}
-                    onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                    className="w-20"
-                  />
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-2">
+                    <label className="text-[10px] font-bold uppercase block mb-1">Logradouro / Rua</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Avenida Brasil, Rua 1500"
+                      value={formData.endereco}
+                      onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase block mb-1">Número (Nº)</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 870"
+                      maxLength={10}
+                      value={formData.numero}
+                      onChange={(e) => setFormData({ ...formData, numero: e.target.value.slice(0, 10) })}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
