@@ -7,10 +7,21 @@ export interface CnpjData {
   num_api: string;
   bairro: string;
   cnae: string;
+  cnaes?: string[];
   responsavel: string;
   telefone: string;
   tipo_atividade: string;
   risco: 'BAIXO' | 'MÉDIO' | 'ALTO';
+}
+
+function formatCnae(code: string | number | undefined, desc: string | undefined): string {
+  if (!code && !desc) return '';
+  const strCode = String(code || '').replace(/\D/g, '');
+  let formattedCode = strCode;
+  if (strCode.length === 7) {
+    formattedCode = `${strCode.slice(0, 4)}-${strCode[4]}/${strCode.slice(5)}`;
+  }
+  return desc ? `${formattedCode} - ${desc.toUpperCase().trim()}` : formattedCode;
 }
 
 function classifyActivity(desc: string): { tipo: string; risco: 'BAIXO' | 'MÉDIO' | 'ALTO' } {
@@ -60,6 +71,12 @@ export async function fetchCnpj(cleanCnpj: string): Promise<CnpjData> {
     const mRes = await fetch(`https://minhareceita.org/${cleanVal}`);
     if (mRes.ok) {
       const d = await mRes.json();
+      const primaryCnae = formatCnae(d.cnae_fiscal, d.cnae_fiscal_descricao);
+      const secCnaes = Array.isArray(d.cnaes_secundarios)
+        ? d.cnaes_secundarios.map((i: any) => formatCnae(i.cnae || i.codigo, i.descricao)).filter(Boolean)
+        : [];
+      const allCnaes = [primaryCnae, ...secCnaes].filter(Boolean);
+
       const cnaeDesc = d.cnae_fiscal_descricao || 'Alimentação e Serviços';
       const { tipo, risco } = classifyActivity(cnaeDesc);
       const logradouroTipo = d.descricao_tipo_de_logradouro ? `${d.descricao_tipo_de_logradouro} ` : '';
@@ -78,6 +95,7 @@ export async function fetchCnpj(cleanCnpj: string): Promise<CnpjData> {
         num_api: d.numero || '100',
         bairro: d.bairro || 'Centro',
         cnae: cnaeDesc,
+        cnaes: allCnaes.length > 0 ? allCnaes : [primaryCnae || cnaeDesc],
         responsavel: d.qsa?.[0]?.nome_socio || 'RESPONSÁVEL CADASTRADO',
         telefone: tel,
         tipo_atividade: tipo,
@@ -93,6 +111,12 @@ export async function fetchCnpj(cleanCnpj: string): Promise<CnpjData> {
     const bRes = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanVal}`);
     if (bRes.ok) {
       const d = await bRes.json();
+      const primaryCnae = formatCnae(d.cnae_fiscal, d.cnae_fiscal_descricao);
+      const secCnaes = Array.isArray(d.cnaes_secundarios)
+        ? d.cnaes_secundarios.map((i: any) => formatCnae(i.code || i.codigo || i.cnae, i.descricao)).filter(Boolean)
+        : [];
+      const allCnaes = [primaryCnae, ...secCnaes].filter(Boolean);
+
       const cnaeDesc = d.cnae_fiscal_descricao || 'Alimentação e Serviços';
       const { tipo, risco } = classifyActivity(cnaeDesc);
       const logradouroTipo = d.descricao_tipo_de_logradouro ? `${d.descricao_tipo_de_logradouro} ` : '';
@@ -111,6 +135,7 @@ export async function fetchCnpj(cleanCnpj: string): Promise<CnpjData> {
         num_api: d.numero || '100',
         bairro: d.bairro || 'Centro',
         cnae: cnaeDesc,
+        cnaes: allCnaes.length > 0 ? allCnaes : [primaryCnae || cnaeDesc],
         responsavel: d.qsa?.[0]?.nome_socio || 'RESPONSÁVEL CADASTRADO',
         telefone: tel,
         tipo_atividade: tipo,

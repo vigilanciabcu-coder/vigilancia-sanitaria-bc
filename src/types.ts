@@ -110,12 +110,33 @@ export interface FiscalizacaoItem {
   parecerIA?: string;
 }
 
+export type ProcessoStatus = 'DEFERIDO' | 'EM ANÁLISE' | 'INDEFERIDO' | 'PENDENTE DOCS' | 'VISTORIA AGENDADA' | 'NOTIFICADO';
+
+export interface ProcessoItem {
+  id: string;
+  num_processo: string;
+  data_protocolo: string;
+  cnpj_cpf: string;
+  razao_social: string;
+  nome_fantasia: string;
+  assunto: string;
+  bairro: string;
+  endereco: string;
+  fiscal_responsavel: string;
+  status: ProcessoStatus;
+  validade?: string;
+  observacoes?: string;
+  cnaes?: string[];
+  servidores?: { id: string; nome: string; matricula: string }[];
+}
+
 export interface PortalButton {
   id: string;
   nome: string;
   url: string;
   img: string;
   acao: 'link' | 'view';
-  view?: 'home' | 'feiras' | 'agenda' | 'master' | 'fiscalizacao';
+  view?: 'home' | 'feiras' | 'agenda' | 'master' | 'fiscalizacao' | 'processos';
   badgetext?: string;
+  somenteMaster?: boolean;
 }

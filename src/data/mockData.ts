@@ -1,4 +1,4 @@
-import { UserProfile, EscalaItem, FeiranteItem, RecadoMural, ChatMessage, FiscalizacaoItem } from '../types';
+import { UserProfile, EscalaItem, FeiranteItem, RecadoMural, ChatMessage, FiscalizacaoItem, ProcessoItem } from '../types';
 
 const today = new Date();
 const todayMM = String(today.getMonth() + 1).padStart(2, '0');
@@ -288,6 +288,125 @@ export const INITIAL_FISCALIZACOES: FiscalizacaoItem[] = [
     fotosUrl: ['https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=80'],
     coordenadas: { lat: -26.9850, lng: -48.6380 },
     parecerIA: 'Infração grave à legislação sanitária de produtos de origem animal e Código de Defesa do Consumidor. Risco iminente à saúde pública.'
+  }
+];
+
+export const INITIAL_PROCESSOS: ProcessoItem[] = [
+  {
+    id: 'proc-1',
+    num_processo: '2026/00101',
+    data_protocolo: '10/01/2026',
+    cnpj_cpf: '63.691.709/0001-09',
+    razao_social: 'NOSSA PADARIA LTDA',
+    nome_fantasia: 'NOSSA PADARIA',
+    assunto: 'Alvará Sanitário - Renovação 2026',
+    bairro: 'Nações',
+    endereco: 'AVENIDA PALESTINA, 870',
+    fiscal_responsavel: 'Carlos Eduardo Silva',
+    status: 'DEFERIDO',
+    validade: '31/12/2026',
+    observacoes: 'Vistoria realizada e laudo de boas práticas aprovado.',
+    cnaes: [
+      '1091-1/02 - FABRICAÇÃO DE PRODUTOS DE PADARIA E CONFEITARIA',
+      '4721-1/02 - PADARIA E CONFEITARIA COM PREDOMINÂNCIA DE REVENDA'
+    ],
+    servidores: [
+      { id: 'u1', nome: 'Carlos Eduardo Silva', matricula: 'FIS-4092' },
+      { id: 'u2', nome: 'Ana Paula Oliveira', matricula: 'AGE-1104' }
+    ]
+  },
+  {
+    id: 'proc-2',
+    num_processo: '2026/00142',
+    data_protocolo: '02/02/2026',
+    cnpj_cpf: '34.567.890/0001-12',
+    razao_social: 'J. B. SANTOS ALIMENTOS ME',
+    nome_fantasia: 'PASTELARIA BEIRA MAR',
+    assunto: 'Licença Sanitária Inicial / Feira',
+    bairro: 'Centro',
+    endereco: 'AVENIDA BRASIL, 1200',
+    fiscal_responsavel: 'Ana Paula Oliveira',
+    status: 'EM ANÁLISE',
+    validade: 'Pendente',
+    observacoes: 'Aguardando apresentação de atestado de manipulação de alimentos.',
+    cnaes: [
+      '5611-2/03 - LANCHONETES, CASAS DE CHÁ, DE SUCOS E SIMILARES',
+      '5611-2/01 - RESTAURANTES E SIMILARES'
+    ],
+    servidores: [
+      { id: 'u2', nome: 'Ana Paula Oliveira', matricula: 'AGE-1104' }
+    ]
+  },
+  {
+    id: 'proc-3',
+    num_processo: '2026/00205',
+    data_protocolo: '15/02/2026',
+    cnpj_cpf: '12.345.678/0001-90',
+    razao_social: 'RESTAURANTE E BAR DA PRAIA BC LTDA',
+    nome_fantasia: 'QUIOSQUE DA ORLA 05',
+    assunto: 'Análise de Projeto Arquitetônico (PBA)',
+    bairro: 'Centro',
+    endereco: 'AVENIDA ATLÂNTICA, 2500',
+    fiscal_responsavel: 'Dr. Roberto Mendes, Carlos Eduardo Silva',
+    status: 'VISTORIA AGENDADA',
+    validade: '31/12/2026',
+    observacoes: 'Inspecionar reforma na área de manipulação e câmara fria.',
+    cnaes: [
+      '5611-2/01 - RESTAURANTES E SIMILARES',
+      '5611-2/02 - BARES E OUTROS ESTABELECIMENTOS ESPECIALIZADOS EM SERVIR BEBIDAS'
+    ],
+    servidores: [
+      { id: 'u3', nome: 'Dr. Roberto Mendes', matricula: 'DIR-0001' },
+      { id: 'u1', nome: 'Carlos Eduardo Silva', matricula: 'FIS-4092' }
+    ]
+  },
+  {
+    id: 'proc-4',
+    num_processo: '2026/00289',
+    data_protocolo: '28/02/2026',
+    cnpj_cpf: '98.765.432/0001-10',
+    razao_social: 'DROGARIA E FARMÁCIA CENTRAL SC',
+    nome_fantasia: 'FARMÁCIA CENTRAL',
+    assunto: 'Licença de Funcionamento - Medicamentos Controlados',
+    bairro: 'Pioneiros',
+    endereco: 'RUA 1500, 420',
+    fiscal_responsavel: 'Carlos Eduardo Silva',
+    status: 'PENDENTE DOCS',
+    validade: 'Pendente',
+    observacoes: 'Notificado para apresentar CRF do Responsável Técnico.',
+    cnaes: [
+      '4771-7/01 - COMÉRCIO VAREJISTA DE PRODUTOS FARMACÊUTICOS, SEM MANIPULAÇÃO DE FÓRMULAS'
+    ]
+  },
+  {
+    id: 'proc-5',
+    num_processo: '2026/00310',
+    data_protocolo: '05/03/2026',
+    cnpj_cpf: '45.123.890/0001-55',
+    razao_social: 'HOTEL BEIRA MAR BALNEÁRIO LTDA',
+    nome_fantasia: 'HOTEL PALACE BC',
+    assunto: 'Habite-se Sanitário / Reinspeção',
+    bairro: 'Estados',
+    endereco: 'AVENIDA DAS MANDACARUS, 150',
+    fiscal_responsavel: 'Ana Paula Oliveira',
+    status: 'DEFERIDO',
+    validade: '31/12/2026',
+    observacoes: 'Certificado de Habitabilidade Sanitária emitido.'
+  },
+  {
+    id: 'proc-6',
+    num_processo: '2026/00344',
+    data_protocolo: '12/03/2026',
+    cnpj_cpf: '22.333.444/0001-88',
+    razao_social: 'AÇOUGUE E MERCADO BC ME',
+    nome_fantasia: 'SUPERMERCADO FAMÍLIA',
+    assunto: 'Processo Administrativo Sanitário (Auto de Infração)',
+    bairro: 'Vila Real',
+    endereco: 'RUA 3000, 1020',
+    fiscal_responsavel: 'Carlos Eduardo Silva',
+    status: 'INDEFERIDO',
+    validade: 'Sem Validade',
+    observacoes: 'Defesa indeferida por descumprimento dos prazos de adequação sanitária.'
   }
 ];
 

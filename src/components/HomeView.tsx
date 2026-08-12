@@ -9,7 +9,7 @@ interface HomeViewProps {
   mural: RecadoMural[];
   chat: ChatMessage[];
   currentUser: UserProfile | null;
-  onNavigate: (view: 'home' | 'feiras' | 'agenda' | 'master' | 'fiscalizacao') => void;
+  onNavigate: (view: 'home' | 'feiras' | 'agenda' | 'master' | 'fiscalizacao' | 'processos') => void;
   onOpenExternal: (url: string) => void;
   onSendMessage: (text: string) => void;
 }
@@ -50,6 +50,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const todayMonth = new Date().getMonth();
 
   const isMasterOrDirector = currentUser?.cargo === 'MASTER' || currentUser?.cargo === 'DIRETOR';
+
+  const visibleButtons = buttons.filter((b) => {
+    if (b.somenteMaster || b.nome.toLowerCase().includes('teste')) {
+      return isMasterOrDirector;
+    }
+    return true;
+  });
 
   // Find plantão
   const todayPlantao = escala.find((e) => e.data === todayISO && e.tipo === 'PLANTAO');
@@ -148,7 +155,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
 
         <div className="grid-portal">
-          {buttons.map((b) => (
+          {visibleButtons.map((b) => (
             <div
               key={b.id}
               onClick={() => {
@@ -158,12 +165,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   onNavigate(b.view);
                 }
               }}
-              className={`card-app ${
+              className={`card-app relative ${
                 b.view === 'fiscalizacao'
                   ? 'border-2 border-emerald-500 dark:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
+                  : b.id === 'tproc'
+                  ? 'border-2 border-amber-500 dark:border-amber-500 bg-amber-50/50 dark:bg-amber-950/20'
                   : ''
               }`}
             >
+              {b.badgetext && (
+                <span className="absolute top-2 right-2 bg-amber-500 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow">
+                  {b.badgetext}
+                </span>
+              )}
               <div className="flex justify-center items-center h-14 w-full">
                 {renderCardGraphic(b)}
               </div>

@@ -7,6 +7,7 @@ import { FiscalizacaoView } from './components/FiscalizacaoView';
 import { FeirasView } from './components/FeirasView';
 import { AgendaView } from './components/AgendaView';
 import { MasterView } from './components/MasterView';
+import { ProcessosView } from './components/ProcessosView';
 import { LoginModal, TrocaSenhaModal } from './components/Modals';
 
 import {
@@ -16,7 +17,8 @@ import {
   FeiranteItem,
   RecadoMural,
   ChatMessage,
-  FiscalizacaoItem
+  FiscalizacaoItem,
+  ProcessoItem
 } from './types';
 
 import {
@@ -25,7 +27,8 @@ import {
   INITIAL_FEIRAS,
   INITIAL_MURAL,
   INITIAL_CHAT,
-  INITIAL_FISCALIZACOES
+  INITIAL_FISCALIZACOES,
+  INITIAL_PROCESSOS
 } from './data/mockData';
 
 import {
@@ -40,6 +43,7 @@ import {
 const PORTAL_BUTTONS: PortalButton[] = [
   { id: 'pref', nome: 'Prefeitura', url: 'https://www.bc.sc.gov.br/', img: 'https://wcbzmpnvcjamlgljsksk.supabase.co/storage/v1/object/public/public-assets/brasao__1_-removebg-preview%20(1).avif', acao: 'link' },
   { id: 'proc', nome: 'Processos', url: 'https://script.google.com/macros/s/AKfycbyaTV2FDyJ2-tC5l7OXiEvD5DVw2QxH_CHO_rHKmdnYxu8bqDQapmP5K9h6C5TEaWWXTQ/exec', img: 'https://wcbzmpnvcjamlgljsksk.supabase.co/storage/v1/object/public/public-assets/processos.avif', acao: 'link' },
+  { id: 'tproc', nome: 'Teste Processo', url: '', img: 'https://wcbzmpnvcjamlgljsksk.supabase.co/storage/v1/object/public/public-assets/processos.avif', acao: 'view', view: 'processos', badgetext: 'SHEETS', somenteMaster: true },
   { id: '1doc', nome: '1Doc', url: 'https://bc.1doc.com.br/b.php?pg=o/login&n=3', img: 'https://wcbzmpnvcjamlgljsksk.supabase.co/storage/v1/object/public/public-assets/1Doc.avif', acao: 'link' },
   { id: 'fisc', nome: 'FISCALIZAÇÃO', url: '', img: 'shield', acao: 'view', view: 'fiscalizacao' },
   { id: 'agen', nome: 'AGENDA', url: '', img: 'calendar', acao: 'view', view: 'agenda' },
@@ -60,7 +64,7 @@ const PORTAL_BUTTONS: PortalButton[] = [
 
 export default function App() {
   // Navigation & View
-  const [currentView, setCurrentView] = useState<'home' | 'feiras' | 'agenda' | 'master' | 'fiscalizacao'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'feiras' | 'agenda' | 'master' | 'fiscalizacao' | 'processos'>('home');
 
   // App State with Persistence
   const [users, setUsers] = useState<UserProfile[]>(() => {
@@ -93,6 +97,11 @@ export default function App() {
   const [fiscalizacoes, setFiscalizacoes] = useState<FiscalizacaoItem[]>(() => {
     const saved = localStorage.getItem('visa_fiscalizacoes');
     return saved ? JSON.parse(saved) : INITIAL_FISCALIZACOES;
+  });
+
+  const [processos, setProcessos] = useState<ProcessoItem[]>(() => {
+    const saved = localStorage.getItem('visa_processos');
+    return saved ? JSON.parse(saved) : INITIAL_PROCESSOS;
   });
 
   const [mural, setMural] = useState<RecadoMural[]>(() => {
@@ -251,11 +260,35 @@ export default function App() {
     deleteOperadorFromSupabase(userId);
   };
 
+  const handleSaveProcesso = (item: ProcessoItem) => {
+    setProcessos((prev) => {
+      const idx = prev.findIndex((p) => p.id === item.id);
+      let updated: ProcessoItem[];
+      if (idx >= 0) {
+        updated = [...prev];
+        updated[idx] = item;
+      } else {
+        updated = [item, ...prev];
+      }
+      localStorage.setItem('visa_processos', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleDeleteProcesso = (id: string) => {
+    setProcessos((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      localStorage.setItem('visa_processos', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const handleResetSystemData = () => {
     setUsers(INITIAL_USERS);
     setEscala(INITIAL_ESCALA);
     setFeiras(INITIAL_FEIRAS);
     setFiscalizacoes(INITIAL_FISCALIZACOES);
+    setProcessos(INITIAL_PROCESSOS);
     setMural(INITIAL_MURAL);
     setChat(INITIAL_CHAT);
     localStorage.clear();
@@ -325,6 +358,16 @@ export default function App() {
 
               {currentView === 'agenda' && (
                 <AgendaView escala={escala} onSaveEscalaItem={handleSaveEscalaItem} />
+              )}
+
+              {currentView === 'processos' && (
+                <ProcessosView
+                  processos={processos}
+                  currentUser={currentUser}
+                  users={users}
+                  onSaveProcesso={handleSaveProcesso}
+                  onDeleteProcesso={handleDeleteProcesso}
+                />
               )}
 
               {currentView === 'master' && (

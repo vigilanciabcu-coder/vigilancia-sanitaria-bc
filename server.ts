@@ -47,7 +47,11 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       rua_api: 'AVENIDA ATLÂNTICA',
       num_api: '1500',
       bairro: 'Centro',
-      cnae: '5611-2/01 Restaurantes e similares / Serviços de Alimentação',
+      cnae: '5611-2/01 - RESTAURANTES E SIMILARES',
+      cnaes: [
+        '5611-2/01 - RESTAURANTES E SIMILARES',
+        '5611-2/03 - LANCHONETES, CASAS DE CHÁ, DE SUCOS E SIMILARES'
+      ],
       responsavel: 'MARIA DA SILVA SANTOS',
       telefone: '(47) 99123-4567',
       tipo_atividade: 'Restaurante / Alimentação',
@@ -61,7 +65,11 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       rua_api: 'PRAÇA DA BÍBLIA',
       num_api: 'S/N',
       bairro: 'Centro',
-      cnae: '5611-2/03 Lanchonetes, casas de chá, de sucos e similares',
+      cnae: '5611-2/03 - LANCHONETES, CASAS DE CHÁ, DE SUCOS E SIMILARES',
+      cnaes: [
+        '5611-2/03 - LANCHONETES, CASAS DE CHÁ, DE SUCOS E SIMILARES',
+        '5611-2/01 - RESTAURANTES E SIMILARES'
+      ],
       responsavel: 'JOÃO BATISTA DOS SANTOS',
       telefone: '(47) 98877-6655',
       tipo_atividade: 'Feira Livre / Ambulante',
@@ -75,7 +83,11 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       rua_api: 'AVENIDA BRASIL',
       num_api: '2200',
       bairro: 'Centro',
-      cnae: '4712-1/00 Comércio varejista de mercadorias em geral',
+      cnae: '4712-1/00 - COMÉRCIO VAREJISTA DE MERCADORIAS EM GERAL',
+      cnaes: [
+        '4712-1/00 - COMÉRCIO VAREJISTA DE MERCADORIAS EM GERAL',
+        '4722-9/01 - COMÉRCIO VAREJISTA DE CARNES - AÇOUGUE'
+      ],
       responsavel: 'PEDRO HENRIQUE OLIVEIRA',
       telefone: '(47) 3367-1000',
       tipo_atividade: 'Supermercado / Açougue',
@@ -89,7 +101,11 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       rua_api: 'RUA 1500',
       num_api: '350',
       bairro: 'Centro',
-      cnae: '5510-8/01 Hotéis e similares',
+      cnae: '5510-8/01 - HOTÉIS E SIMILARES',
+      cnaes: [
+        '5510-8/01 - HOTÉIS E SIMILARES',
+        '5611-2/01 - RESTAURANTES E SIMILARES'
+      ],
       responsavel: 'ANA PAULA MENDES',
       telefone: '(47) 3361-2020',
       tipo_atividade: 'Hotel / Pousada',
@@ -103,7 +119,11 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       rua_api: 'AVENIDA PALESTINA',
       num_api: '870',
       bairro: 'Nações',
-      cnae: '1091-1/02 Fabricação de produtos de padaria e confeitaria',
+      cnae: '1091-1/02 - FABRICAÇÃO DE PRODUTOS DE PADARIA E CONFEITARIA',
+      cnaes: [
+        '1091-1/02 - FABRICAÇÃO DE PRODUTOS DE PADARIA E CONFEITARIA',
+        '4721-1/02 - PADARIA E CONFEITARIA COM PREDOMINÂNCIA DE REVENDA'
+      ],
       responsavel: 'SAMUEL SILVEIRA RAMOS',
       telefone: '(47) 3360-0741',
       tipo_atividade: 'Lanchonete / Fast Food',
@@ -116,7 +136,17 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
     return;
   }
 
-  // Helpers for activity classification
+  // Helpers for formatting CNAE and activity classification
+  const formatCnae = (code: string | number | undefined, desc: string | undefined): string => {
+    if (!code && !desc) return '';
+    const strCode = String(code || '').replace(/\D/g, '');
+    let formattedCode = strCode;
+    if (strCode.length === 7) {
+      formattedCode = `${strCode.slice(0, 4)}-${strCode[4]}/${strCode.slice(5)}`;
+    }
+    return desc ? `${formattedCode} - ${desc.toUpperCase().trim()}` : formattedCode;
+  };
+
   const classifyActivity = (desc: string) => {
     const d = (desc || '').toLowerCase();
     if (d.includes('açougue') || d.includes('carnes') || d.includes('supermercado') || d.includes('varejista')) {
@@ -152,6 +182,12 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       });
       if (mRes.ok) {
         const d = await mRes.json();
+        const primaryCnae = formatCnae(d.cnae_fiscal, d.cnae_fiscal_descricao);
+        const secCnaes = Array.isArray(d.cnaes_secundarios)
+          ? d.cnaes_secundarios.map((i: any) => formatCnae(i.cnae || i.codigo, i.descricao)).filter(Boolean)
+          : [];
+        const allCnaes = [primaryCnae, ...secCnaes].filter(Boolean);
+
         const cnaeDesc = d.cnae_fiscal_descricao || 'Alimentação e Serviços';
         const { tipo, risco } = classifyActivity(cnaeDesc);
         const rua = `${d.descricao_tipo_de_logradouro || ''} ${d.logradouro || ''}`.trim() || 'AVENIDA BRASIL';
@@ -164,6 +200,7 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
           num_api: d.numero || '100',
           bairro: d.bairro || 'Centro',
           cnae: cnaeDesc,
+          cnaes: allCnaes.length > 0 ? allCnaes : [primaryCnae || cnaeDesc],
           responsavel: d.qsa?.[0]?.nome_socio || 'RESPONSÁVEL CADASTRADO',
           telefone: d.ddd_telefone_1 ? `(${d.ddd_telefone_1.slice(0, 2)}) ${d.ddd_telefone_1.slice(2)}` : '(47) 3367-0000',
           tipo_atividade: tipo,
@@ -183,6 +220,12 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       });
       if (bRes.ok) {
         const d = await bRes.json();
+        const primaryCnae = formatCnae(d.cnae_fiscal, d.cnae_fiscal_descricao);
+        const secCnaes = Array.isArray(d.cnaes_secundarios)
+          ? d.cnaes_secundarios.map((i: any) => formatCnae(i.code || i.codigo || i.cnae, i.descricao)).filter(Boolean)
+          : [];
+        const allCnaes = [primaryCnae, ...secCnaes].filter(Boolean);
+
         const cnaeDesc = d.cnae_fiscal_descricao || 'Alimentação e Serviços Diversos';
         const { tipo, risco } = classifyActivity(cnaeDesc);
 
@@ -195,6 +238,7 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
           num_api: d.numero || '100',
           bairro: d.bairro || 'Centro',
           cnae: cnaeDesc,
+          cnaes: allCnaes.length > 0 ? allCnaes : [primaryCnae || cnaeDesc],
           responsavel: d.qsa?.[0]?.nome_socio || d.qsa?.[0]?.nome || 'RESPONSÁVEL TÉCNICO',
           telefone: d.ddd_telefone_1 ? `(${d.ddd_telefone_1.slice(0, 2)}) ${d.ddd_telefone_1.slice(2)}` : '(47) 3367-0000',
           tipo_atividade: tipo,
@@ -215,6 +259,14 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
       if (rRes.ok) {
         const d = await rRes.json();
         if (d.status !== 'ERROR') {
+          const primaryCnae = Array.isArray(d.atividade_principal) && d.atividade_principal[0]
+            ? formatCnae(d.atividade_principal[0].code, d.atividade_principal[0].text)
+            : '';
+          const secCnaes = Array.isArray(d.atividades_secundarias)
+            ? d.atividades_secundarias.map((i: any) => formatCnae(i.code, i.text)).filter(Boolean)
+            : [];
+          const allCnaes = [primaryCnae, ...secCnaes].filter(Boolean);
+
           const cnaeDesc = d.atividade_principal?.[0]?.text || 'Alimentação e Serviços';
           const { tipo, risco } = classifyActivity(cnaeDesc);
           res.json({
@@ -226,6 +278,7 @@ app.get('/api/cnpj/:cnpj', async (req, res) => {
             num_api: d.numero || '100',
             bairro: d.bairro || 'Centro',
             cnae: cnaeDesc,
+            cnaes: allCnaes.length > 0 ? allCnaes : [primaryCnae || cnaeDesc],
             responsavel: d.qsa?.[0]?.nome || 'RESPONSÁVEL TÉCNICO',
             telefone: d.telefone || '(47) 3367-0000',
             tipo_atividade: tipo,

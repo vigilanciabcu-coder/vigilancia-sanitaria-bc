@@ -6,7 +6,7 @@ interface SidebarProps {
   buttons: PortalButton[];
   currentView: string;
   currentUser: UserProfile | null;
-  onNavigate: (view: 'home' | 'feiras' | 'agenda' | 'master' | 'fiscalizacao') => void;
+  onNavigate: (view: 'home' | 'feiras' | 'agenda' | 'master' | 'fiscalizacao' | 'processos') => void;
   onOpenExternal: (url: string) => void;
 }
 
@@ -19,6 +19,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const isMasterOrDirector = currentUser?.cargo === 'MASTER' || currentUser?.cargo === 'DIRETOR';
   const todayDay = new Date().getDate();
+
+  const visibleButtons = buttons.filter((b) => {
+    if (b.somenteMaster || b.nome.toLowerCase().includes('teste')) {
+      return isMasterOrDirector;
+    }
+    return true;
+  });
 
   const renderIcon = (b: PortalButton) => {
     if (b.img === 'shield') {
@@ -51,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className="sidebar h-full flex flex-col py-4 shadow-xl bg-slate-900 border-r border-slate-800">
       <nav id="sidebar-nav" className="flex-1 w-full space-y-1 px-1.5 text-white">
-        {buttons.map((b) => {
+        {visibleButtons.map((b) => {
           const isActive = b.view && currentView === b.view;
           return (
             <button
