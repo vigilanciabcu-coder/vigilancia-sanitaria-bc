@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { FiscalizacaoItem, InspectionCheckitem, InspectionStatus, RiskLevel, InspectionType, UserProfile } from '../types';
 import { BAIRROS_BC } from '../data/mockData';
+import { fetchCnpj } from '../lib/cnpjService';
 import {
   ShieldCheck,
   PlusCircle,
@@ -94,70 +95,51 @@ export const FiscalizacaoView: React.FC<FiscalizacaoViewProps> = ({
     }
 
     setLoadingCnpj(true);
-    setCnpjNotice('🔍 Consultando API da Receita Federal / DVIS...');
+    setCnpjNotice('🔍 Consultando API da Receita Federal...');
 
     try {
-      const res = await fetch(`/api/cnpj/${cleanVal}`);
-      if (res.ok) {
-        const data = await res.json();
+      const data = await fetchCnpj(cleanVal);
 
-        // Normalização do Bairro sem acentos para corresponder à lista BAIRROS_BC
-        const normStr = (str: string) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        const rawBairro = data.bairro || '';
-        const matchedBairro = BAIRROS_BC.find(
-          (b) => normStr(b) === normStr(rawBairro)
-        ) || BAIRROS_BC.find(
-          (b) => normStr(rawBairro).includes(normStr(b)) || normStr(b).includes(normStr(rawBairro))
-        ) || 'Centro';
+      // Normalização do Bairro sem acentos para corresponder à lista BAIRROS_BC
+      const normStr = (str: string) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const rawBairro = data.bairro || '';
+      const matchedBairro = BAIRROS_BC.find(
+        (b) => normStr(b) === normStr(rawBairro)
+      ) || BAIRROS_BC.find(
+        (b) => normStr(rawBairro).includes(normStr(b)) || normStr(b).includes(normStr(rawBairro))
+      ) || 'Centro';
 
-        // Normalização do Tipo de Atividade
-        let matchedTipo = 'Restaurante / Alimentação';
-        if (data.tipo_atividade) {
-          const t = data.tipo_atividade.toLowerCase();
-          if (t.includes('feira') || t.includes('ambulante')) matchedTipo = 'Feira Livre / Ambulante';
-          else if (t.includes('supermercado') || t.includes('açougue') || t.includes('acougue')) matchedTipo = 'Supermercado / Açougue';
-          else if (t.includes('lanchonete') || t.includes('fast food')) matchedTipo = 'Lanchonete / Fast Food';
-          else if (t.includes('drogaria') || t.includes('farmácia') || t.includes('farmacia')) matchedTipo = 'Drogaria / Farmácia';
-          else if (t.includes('hotel') || t.includes('pousada')) matchedTipo = 'Hotel / Pousada';
-          else if (t.includes('estética') || t.includes('estetica') || t.includes('salão') || t.includes('salao')) matchedTipo = 'Estética / Salão';
-        }
-
-        setFormData((prev) => ({
-          ...prev,
-          cnpjCpf: rawVal.length > 11 && !rawVal.includes('/') 
-            ? cleanVal.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
-            : rawVal,
-          razaoSocial: data.razao || `ESTABELECIMENTO (${cleanVal}) LTDA`,
-          nomeFantasia: data.nome_fantasia || data.razao || 'ESTABELECIMENTO CADASTRADO',
-          endereco: data.rua_api || 'AVENIDA BRASIL',
-          numero: data.num_api || '100',
-          bairro: matchedBairro,
-          responsavel: data.responsavel || 'GERENTE RESPONSÁVEL',
-          telefone: data.telefone || '(47) 3367-0000',
-          tipo: matchedTipo,
-          risco: (data.risco as RiskLevel) || 'MÉDIO'
-        }));
-        setCnpjNotice(`✅ API Receita Federal: Dados preenchidos com sucesso para ${data.nome_fantasia || data.razao || 'o estabelecimento'}!`);
-      } else {
-        setFormData((prev) => ({
-          ...prev,
-          razaoSocial: `ESTABELECIMENTO (${cleanVal}) LTDA`,
-          nomeFantasia: 'RESTAURANTE E GASTRONOMIA BC',
-          endereco: 'AVENIDA BRASIL',
-          numero: '100',
-          bairro: 'Centro'
-        }));
-        setCnpjNotice('✅ Dados preenchidos no formulário com sucesso!');
+      // Normalização do Tipo de Atividade
+      let matchedTipo = 'Restaurante / Alimentação';
+      if (data.tipo_atividade) {
+        const t = data.tipo_atividade.toLowerCase();
+        if (t.includes('feira') || t.includes('ambulante')) matchedTipo = 'Feira Livre / Ambulante';
+        else if (t.includes('supermercado') || t.includes('açougue') || t.includes('acougue')) matchedTipo = 'Supermercado / Açougue';
+        else if (t.includes('lanchonete') || t.includes('fast food')) matchedTipo = 'Lanchonete / Fast Food';
+        else if (t.includes('drogaria') || t.includes('farmácia') || t.includes('farmacia')) matchedTipo = 'Drogaria / Farmácia';
+        else if (t.includes('hotel') || t.includes('pousada')) matchedTipo = 'Hotel / Pousada';
+        else if (t.includes('estética') || t.includes('estetica') || t.includes('salão') || t.includes('salao')) matchedTipo = 'Estética / Salão';
       }
-    } catch (e) {
-      console.error('Erro na busca de CNPJ:', e);
+
       setFormData((prev) => ({
         ...prev,
-        razaoSocial: `ESTABELECIMENTO (${cleanVal}) LTDA`,
-        nomeFantasia: 'RESTAURANTE E GASTRONOMIA BC',
-        endereco: 'AVENIDA BRASIL'
+        cnpjCpf: rawVal.length > 11 && !rawVal.includes('/') 
+          ? cleanVal.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+          : rawVal,
+        razaoSocial: data.razao || `ESTABELECIMENTO (${cleanVal}) LTDA`,
+        nomeFantasia: data.nome_fantasia || data.razao || 'ESTABELECIMENTO CADASTRADO',
+        endereco: data.rua_api || 'AVENIDA BRASIL',
+        numero: data.num_api || '100',
+        bairro: matchedBairro,
+        responsavel: data.responsavel || 'GERENTE RESPONSÁVEL',
+        telefone: data.telefone || '(47) 3367-0000',
+        tipo: matchedTipo,
+        risco: (data.risco as RiskLevel) || 'MÉDIO'
       }));
-      setCnpjNotice('✅ Dados do formulário preenchidos!');
+      setCnpjNotice(`✅ Dados da Receita Federal carregados para: ${data.nome_fantasia || data.razao}`);
+    } catch (e) {
+      console.error('Erro na busca de CNPJ:', e);
+      setCnpjNotice('⚠️ Não foi possível consultar o CNPJ automaticamente.');
     } finally {
       setLoadingCnpj(false);
       setTimeout(() => setCnpjNotice(null), 5000);

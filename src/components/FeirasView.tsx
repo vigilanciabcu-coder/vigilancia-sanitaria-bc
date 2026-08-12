@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FeiranteItem } from '../types';
 import { BAIRROS_BC } from '../data/mockData';
+import { fetchCnpj } from '../lib/cnpjService';
 import { Plus, Edit2, Search, X, Check, RefreshCw, FileSpreadsheet, ExternalLink, Settings } from 'lucide-react';
 import {
   fetchFeirantesFromSheets,
@@ -146,21 +147,18 @@ export const FeirasView: React.FC<FeirasViewProps> = ({
 
     setLoadingCnpj(true);
     try {
-      const res = await fetch(`/api/cnpj/${cleanVal}`);
-      if (res.ok) {
-        const d = await res.json();
-        setFormItem((prev) => ({
-          ...prev,
-          razao: d.razao || `ESTABELECIMENTO (${cleanVal}) LTDA`,
-          nome_pf: d.responsavel || d.razao || prev.nome_pf || 'PROPRIETÁRIO CADASTRADO',
-          municipio: d.municipio || 'BALNEÁRIO CAMBORIÚ',
-          estado: d.estado || 'SC',
-          rua_api: d.rua_api || 'AVENIDA BRASIL',
-          num_api: d.num_api || '100',
-          bairro: d.bairro || 'Centro',
-          cnae: d.cnae || '5611-2/01 Serviços de Alimentação'
-        }));
-      }
+      const d = await fetchCnpj(cleanVal);
+      setFormItem((prev) => ({
+        ...prev,
+        razao: d.razao || `ESTABELECIMENTO (${cleanVal}) LTDA`,
+        nome_pf: d.responsavel || d.razao || prev.nome_pf || 'PROPRIETÁRIO CADASTRADO',
+        municipio: d.municipio || 'BALNEÁRIO CAMBORIÚ',
+        estado: d.estado || 'SC',
+        rua_api: d.rua_api || 'AVENIDA BRASIL',
+        num_api: d.num_api || '100',
+        bairro: d.bairro || 'Centro',
+        cnae: d.cnae || '5611-2/01 Serviços de Alimentação'
+      }));
     } catch {
       setFormItem((prev) => ({
         ...prev,
